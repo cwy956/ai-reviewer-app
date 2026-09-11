@@ -1,0 +1,9 @@
+{
+  "id": "default",
+  "name": "AI 심사역",
+  "affiliation": "기본",
+  "bio": "한국 벤처투자 실무 표준 기준으로 IR 자료의 충실도를 평가합니다. 특정 개인의 관점이 아닌, 딥테크 분야에서 일반적으로 통용되는 심사 체크리스트를 기준으로 삼습니다.",
+  "portfolio": [],
+  "isDefault": true,
+  "domainCriteria": []
+}

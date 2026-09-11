@@ -1,0 +1,78 @@
+{
+  "id": "jungwooyoung",
+  "name": "정우영",
+  "affiliation": "안다아시아벤처스",
+  "bio": "[임시 프로필입니다 — 실제 소개·경력·포트폴리오로 교체해 주세요] 안다아시아벤처스에서 딥테크 스타트업을 발굴하고 투자합니다.",
+  "portfolio": [
+    "[포트폴리오 회사명 1]",
+    "[포트폴리오 회사명 2]"
+  ],
+  "isDefault": false,
+  "sevenPrinciples": {
+    "intro": "[임시] 딥테크 초기 스타트업 전문 심사역. 기술 근거와 실행력을 함께 봅니다.",
+    "stagePreference": "[임시] 시드~시리즈A, 딥테크 하드웨어·AI 전반",
+    "priorityOrder": [
+      "팀",
+      "제품·기술",
+      "시장",
+      "트랙션",
+      "재무·딜"
+    ],
+    "judgmentPoints": {
+      "team": "[임시] 이 문제를 풀 수 있는 팀인가를 본다",
+      "market": "[임시] 막연한 글로벌 TAM보다 구체적 초기 고객을 본다",
+      "product": "[임시] 기술이 실제 병목을 해결하는지, 로드맵이 현실적인지를 본다",
+      "traction": "[임시] 초기엔 신호(LOI·정부과제 등), 후기엔 재무 지표를 본다",
+      "finance": "[임시] 다음 마일스톤까지의 자금 계획이 타당한지를 본다"
+    },
+    "preferredTraction": "[임시] PO/MOU, 정부과제 선정, 핵심 스펙 실측치",
+    "redFlags": "[임시] 단일 고객 의존, 기술은 있으나 고객이 없음, 상용화 일정 과대",
+    "tone": "[임시] 직설적이되 정중하게. 강점은 인정하되 우려되는 지점은 분명히 전달"
+  },
+  "domainCriteria": [
+    {
+      "domainId": "semiconductor",
+      "starredCheckpointIds": [
+        "semiconductor-team-3",
+        "semiconductor-market-2",
+        "semiconductor-product-1",
+        "semiconductor-product-4",
+        "semiconductor-traction-1"
+      ],
+      "freeform": "[임시 서술입니다 — 실제 판단 기준으로 교체해 주세요] 밸류체인 내 위치와 국산화 가능성을 먼저 보고, 중후기에는 실제 고객사와의 퀄 진행 단계를 중요하게 봅니다."
+    },
+    {
+      "domainId": "ai",
+      "starredCheckpointIds": [
+        "ai-team-1",
+        "ai-product-1",
+        "ai-product-2",
+        "ai-traction-2",
+        "ai-traction-1"
+      ],
+      "freeform": "[임시 서술입니다 — 실제 판단 기준으로 교체해 주세요] 글로벌 파운데이션 모델이 못 하는 영역을 타겟하는지, 데이터 해자가 실제로 방어 가능한지를 중요하게 봅니다."
+    },
+    {
+      "domainId": "space",
+      "starredCheckpointIds": [
+        "space-team-1",
+        "space-team-2",
+        "space-market-2",
+        "space-traction-2",
+        "space-finance-1"
+      ],
+      "freeform": "[임시 서술입니다 — 실제 판단 기준으로 교체해 주세요] 정부과제 의존도와 민간 전환 로드맵의 현실성을 함께 봅니다."
+    },
+    {
+      "domainId": "battery",
+      "starredCheckpointIds": [
+        "battery-team-1",
+        "battery-market-1",
+        "battery-product-1",
+        "battery-traction-1",
+        "battery-finance-1"
+      ],
+      "freeform": "퀄 단계보다 고객사 라인(대기업 vs 중소)을 우선 본다"
+    }
+  ]
+}
