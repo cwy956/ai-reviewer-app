@@ -27,6 +27,18 @@ export interface StorylineStep {
   detail: string;
 }
 
+/**
+ * A separate axis from totalScore/categoryScores (which measure IR 자료 완성도 — did the
+ * material include the expected information). This measures whether the claims IN that
+ * material hold up against the domain's usual competitive/technical/financial patterns —
+ * still framed as "근거의 산업적 타당성", never as investment attractiveness or a buy/pass call.
+ */
+export interface IndustryFitAssessment {
+  summary: string;
+  strongPoints: CitedPoint[];
+  concerns: CitedPoint[];
+}
+
 export interface EvaluationReport {
   totalScore: number;
   verdictTag: string;
@@ -39,6 +51,7 @@ export interface EvaluationReport {
   categoryScores: CategoryScore[];
   strengths: CitedPoint[];
   improvements: CitedPoint[];
+  industryFit: IndustryFitAssessment;
   storyline: StorylineStep[];
   actionPlan: ActionItem[];
   reviewerQuestions: string[];

@@ -50,10 +50,25 @@ function renderDomainChecklist(persona: Persona, domain: Domain): string {
   return `평가 영역: ${domain.label}\n\n${byCategory.join("\n\n")}${freeform}\n\n⭐ 표시된 체크포인트는 이 심사역이 특히 중요하게 보는 항목이므로, 해당 항목이 미흡할 경우 점수와 보강 포인트에 더 크게 반영하세요.`;
 }
 
+function renderIndustryFitInstructions(domain: Domain): string {
+  return `[산업 적합성 판단 — 자료 완성도 점수와는 별개의 축]
+categoryScores(자료 완성도: 체크포인트별 정보 기재 여부)와는 별도로, industryFit 필드에서는 이 자료에 담긴 기술·전략·트랙션·재무 관련 "주장" 자체가 "${domain.label}" 산업의 통상적인 경쟁 구도·기술 성숙도·자본 집약도·성공 패턴에 비추어 근거가 탄탄한지를 진단하세요.
+
+판단에 참고할 관점 (해당 산업 지식을 적극 활용하세요):
+- 제시된 기술/제품이 이 산업에서 실제로 방어 가능한 차별화인지, 아니면 흔한 일반론적 주장에 그치는지
+- 제시된 트랙션(고객·파트너십·실증 등)이 이 산업의 통상적 검증 단계(예: PoC → 파일럿 → 양산/스케일업)에서 어느 지점에 있는지, 그 단계가 주장하는 성숙도와 부합하는지
+- 시장 진입·수익화 전략이 이 산업에서 흔히 성공/실패하는 패턴과 부합하는지
+- 재무·자금 계획이 이 산업의 전형적 자본 집약도·개발 주기(예: 하드웨어는 장기 CAPEX, SaaS는 초기 적자 후 스케일)에 비추어 현실적인지
+
+이 판단도 여전히 "투자 매력도"나 "투자 여부"가 아니라 "자료 속 주장의 산업적 타당성"에 대한 진단입니다. "투자하라/투자하지 마라", "유망하다/유망하지 않다" 같은 표현은 절대 쓰지 마세요. 대신 "이 접근은 이 산업의 통상적 기준에서 근거가 탄탄합니다/약합니다" 식으로, 왜 그런지 산업 맥락과 함께 서술하세요. strongPoints와 concerns에도 반드시 페이지 근거(pageRefs)를 다세요.`;
+}
+
 export function buildSystemPrompt(persona: Persona, domain: Domain): string {
   return `${renderPersonaSection(persona)}
 
 ${renderDomainChecklist(persona, domain)}
+
+${renderIndustryFitInstructions(domain)}
 
 [중요한 가드레일]
 - 이 평가는 "투자 매력도"나 "투자 의향"이 아니라, IR 자료가 위 체크포인트의 근거를 얼마나 충실히 담았는지(자료 완성도)를 보는 것입니다.

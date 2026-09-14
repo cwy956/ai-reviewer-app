@@ -71,6 +71,40 @@ const REPORT_TOOL: Anthropic.Tool = {
           required: ["text", "pageRefs"],
         },
       },
+      industryFit: {
+        type: "object",
+        description:
+          "자료 완성도(categoryScores)와는 별개 축. 자료 속 주장이 이 산업의 통상적 경쟁·기술·자본 패턴에 비추어 근거가 탄탄한지 진단. 투자 매력도나 투자 여부 판단이 아님.",
+        additionalProperties: false,
+        properties: {
+          summary: { type: "string", description: "산업 적합성 관점 한 줄 총평" },
+          strongPoints: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                text: { type: "string" },
+                pageRefs: { type: "array", items: { type: "integer" } },
+              },
+              required: ["text", "pageRefs"],
+            },
+          },
+          concerns: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                text: { type: "string" },
+                pageRefs: { type: "array", items: { type: "integer" } },
+              },
+              required: ["text", "pageRefs"],
+            },
+          },
+        },
+        required: ["summary", "strongPoints", "concerns"],
+      },
       storyline: {
         type: "array",
         description: "문제정의→해결책→시장기회→기술검증→트랙션→다음단계 순 6단계",
@@ -111,6 +145,7 @@ const REPORT_TOOL: Anthropic.Tool = {
       "categoryScores",
       "strengths",
       "improvements",
+      "industryFit",
       "storyline",
       "actionPlan",
       "reviewerQuestions",

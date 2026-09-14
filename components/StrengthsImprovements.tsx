@@ -1,6 +1,6 @@
 import type { CitedPoint } from "@/lib/reportSchema";
 
-function PageBadges({ pageRefs }: { pageRefs: number[] }) {
+export function PageBadges({ pageRefs }: { pageRefs: number[] }) {
   if (!pageRefs || pageRefs.length === 0) return null;
   return (
     <span className="ml-2 inline-flex gap-1">

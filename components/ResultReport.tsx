@@ -5,6 +5,7 @@ import type { EvaluationReport } from "@/lib/reportSchema";
 import { RadarScoreChart } from "./RadarScoreChart";
 import { StageFitBar } from "./StageFitBar";
 import { StrengthsImprovements } from "./StrengthsImprovements";
+import { IndustryFitPanel } from "./IndustryFitPanel";
 import { StorylineTimeline } from "./StorylineTimeline";
 import { ActionPlanList } from "./ActionPlanList";
 import { ReviewerQuestions } from "./ReviewerQuestions";
@@ -90,6 +91,7 @@ export function ResultReport({
 
       <StageFitBar stageAssessment={report.stageAssessment} />
       <StrengthsImprovements strengths={report.strengths} improvements={report.improvements} />
+      <IndustryFitPanel industryFit={report.industryFit} />
       <CategoryDetail categoryScores={report.categoryScores} />
       <StorylineTimeline storyline={report.storyline} />
       <PeerResearchPlaceholder />
