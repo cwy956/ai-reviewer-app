@@ -1,11 +1,31 @@
 import { countMessages, fetchRecentMailSummaries } from "./client";
-import { classifyMails } from "./classify";
+import { classifyMails, type ClassifiedMail } from "./classify";
 import { sendTeamsNewMailAlert } from "./notifyTeams";
+import { sendEmailAlerts } from "./notifyEmail";
 import { readWatchState, writeWatchState } from "./watchStore";
 
 const THRESHOLD = Number(process.env.MAIL_WATCH_THRESHOLD || 5);
 const INTERVAL_MINUTES = Number(process.env.MAIL_WATCH_INTERVAL_MINUTES || 5);
 const INTERVAL_MS = INTERVAL_MINUTES * 60_000;
+
+/** Fans a classified batch out to both notification channels and logs the outcome of each. */
+async function dispatchAlerts(classified: ClassifiedMail[], label: string) {
+  const appUrl = process.env.APP_BASE_URL || "http://localhost:3000";
+  const dashboardUrl = `${appUrl}/mailbox`;
+
+  const [teams, email] = await Promise.all([
+    sendTeamsNewMailAlert(classified, dashboardUrl),
+    sendEmailAlerts(classified, dashboardUrl),
+  ]);
+
+  console.log(
+    `[mail-watch]${label} 메일 ${classified.length}통 알림 — Teams: 심사역용 ${teams.reviewer.ok ? "성공" : teams.reviewer.skipped ? "스킵" : "실패"}, ` +
+      `관리팀용 ${teams.admin.ok ? "성공" : teams.admin.skipped ? "스킵" : "실패"} | ` +
+      `이메일: ${email.sentGroups}명 성공, ${email.failedGroups}명 실패, 담당자 없어 스킵 ${email.skippedNoRecipient}건`
+  );
+
+  return { teams, email };
+}
 
 export interface WatchCheckResult {
   totalInMailbox: number;
@@ -46,12 +66,7 @@ export async function checkForNewMail(): Promise<WatchCheckResult> {
   if (newSinceLastAlert >= THRESHOLD) {
     const newMails = await fetchRecentMailSummaries(newSinceLastAlert);
     const classified = await classifyMails(newMails);
-    const appUrl = process.env.APP_BASE_URL || "http://localhost:3000";
-    const { reviewer, admin } = await sendTeamsNewMailAlert(classified, `${appUrl}/mailbox`);
-    console.log(
-      `[mail-watch] 새 메일 ${newMails.length}통 알림 전송 — 심사역용 ${reviewer.ok ? "성공" : reviewer.skipped ? "스킵" : "실패"}, ` +
-        `관리팀용 ${admin.ok ? "성공" : admin.skipped ? "스킵" : "실패"}`
-    );
+    await dispatchAlerts(classified, "");
     writeWatchState({ lastAlertedCount: total, lastCheckedAt: new Date().toISOString(), lastAlertedAt: new Date().toISOString() });
     return { totalInMailbox: total, newSinceLastAlert, alerted: true };
   }
@@ -68,13 +83,8 @@ export async function checkForNewMail(): Promise<WatchCheckResult> {
 export async function sendTestAlert(count: number): Promise<{ fetchedCount: number; alerted: boolean }> {
   const mails = await fetchRecentMailSummaries(count);
   const classified = await classifyMails(mails);
-  const appUrl = process.env.APP_BASE_URL || "http://localhost:3000";
-  const { reviewer, admin } = await sendTeamsNewMailAlert(classified, `${appUrl}/mailbox`);
-  console.log(
-    `[mail-watch] (테스트) 메일 ${mails.length}통으로 알림 전송 — 심사역용 ${reviewer.ok ? "성공" : reviewer.skipped ? "스킵" : "실패"}, ` +
-      `관리팀용 ${admin.ok ? "성공" : admin.skipped ? "스킵" : "실패"}`
-  );
-  return { fetchedCount: mails.length, alerted: reviewer.ok || admin.ok };
+  const { teams, email } = await dispatchAlerts(classified, " (테스트)");
+  return { fetchedCount: mails.length, alerted: teams.reviewer.ok || teams.admin.ok || email.sentGroups > 0 };
 }
 
 declare global {

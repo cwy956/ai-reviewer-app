@@ -25,6 +25,8 @@ export interface Persona {
   name: string;
   affiliation: string;
   bio: string;
+  /** Real contact email — used to route IR mail-alert notifications for this reviewer's domains. */
+  email?: string;
   portfolio: string[];
   isDefault: boolean;
   sevenPrinciples?: SevenPrinciples;

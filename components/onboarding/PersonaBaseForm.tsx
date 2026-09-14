@@ -20,6 +20,7 @@ export function PersonaBaseForm({ initial }: { initial?: Persona }) {
   const [id, setId] = useState(initial?.id ?? "");
   const [name, setName] = useState(initial?.name ?? "");
   const [affiliation, setAffiliation] = useState(initial?.affiliation ?? "");
+  const [email, setEmail] = useState(initial?.email ?? "");
   const [bio, setBio] = useState(initial?.bio ?? "");
   const [portfolio, setPortfolio] = useState<string[]>(initial?.portfolio ?? ["", "", "", ""]);
   const [seven, setSeven] = useState<SevenPrinciples>(initial?.sevenPrinciples ?? EMPTY_SEVEN);
@@ -41,6 +42,7 @@ export function PersonaBaseForm({ initial }: { initial?: Persona }) {
           id,
           name,
           affiliation,
+          email,
           bio,
           portfolio: portfolio.filter((p) => p.trim().length > 0),
           isDefault: false,
@@ -87,6 +89,16 @@ export function PersonaBaseForm({ initial }: { initial?: Persona }) {
               value={affiliation}
               onChange={(e) => setAffiliation(e.target.value)}
               placeholder="안다아시아벤처스"
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>이메일 (담당 IR 알림 수신용)</span>
+            <input
+              type="email"
+              className={inputClass}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@andaasiavc.com"
             />
           </label>
         </div>

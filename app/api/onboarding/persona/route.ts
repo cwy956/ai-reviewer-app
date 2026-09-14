@@ -17,6 +17,7 @@ export async function POST(request: Request) {
       name: body.name,
       affiliation: body.affiliation,
       bio: body.bio ?? "",
+      email: body.email?.trim() || undefined,
       portfolio: body.portfolio ?? [],
       isDefault: false,
       sevenPrinciples: body.sevenPrinciples,

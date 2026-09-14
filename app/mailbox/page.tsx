@@ -216,6 +216,12 @@ export default function MailboxPage() {
         <a href="/" className="mt-3 inline-block text-xs text-muted underline hover:text-accent-soft">
           ← IR 평가 앱으로
         </a>
+        <a
+          href="/mailbox/sent"
+          className="mt-3 ml-4 inline-block text-xs text-muted underline hover:text-accent-soft"
+        >
+          이메일 발송 이력 보기 →
+        </a>
       </header>
 
       <div className="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-panel-border bg-panel p-4">

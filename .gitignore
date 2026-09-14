@@ -45,3 +45,4 @@ next-env.d.ts
 lib/mail/backlog-cache.json
 lib/mail/backlog-pending.json
 lib/mail/watch-state.json
+lib/mail/send-log.json

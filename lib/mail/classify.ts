@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { MailSummary } from "./client";
+import { domains } from "../domains";
 
 export type MailCategory = "ir" | "gov_program" | "biz_proposal" | "spam" | "etc";
 
@@ -13,10 +14,15 @@ export const CATEGORY_LABELS: Record<MailCategory, string> = {
 
 export const CATEGORY_ORDER: MailCategory[] = ["ir", "gov_program", "biz_proposal", "etc", "spam"];
 
+const DOMAIN_IDS = domains.map((d) => d.id);
+
 export interface ClassifiedMail extends MailSummary {
   category: MailCategory;
   reason: string;
   priority: "높음" | "중간" | "낮음";
+  /** Only meaningful when category === "ir" — which of the 9 industry domains this deal belongs
+   * to, used to route the alert to the reviewer(s) who cover that domain. Null otherwise. */
+  domainId: string | null;
 }
 
 export const MODEL = process.env.MAIL_CLASSIFY_MODEL || "claude-haiku-4-5";
@@ -43,8 +49,14 @@ export const CLASSIFY_TOOL: Anthropic.Tool = {
               enum: ["높음", "중간", "낮음"],
               description: "심사역이 우선 검토할 가치 — category가 ir일 때만 의미 있음, 그 외는 낮음으로",
             },
+            domainId: {
+              type: ["string", "null"],
+              enum: [...DOMAIN_IDS, null],
+              description:
+                "category가 ir일 때만: 이 스타트업이 속한 업종 도메인 ID (담당 심사역 라우팅용). ir이 아니면 null.",
+            },
           },
-          required: ["msgNum", "category", "reason", "priority"],
+          required: ["msgNum", "category", "reason", "priority", "domainId"],
         },
       },
     },
@@ -62,6 +74,11 @@ export const SYSTEM_PROMPT = `당신은 벤처캐피탈 심사역의 공용 이�
 - etc: 위 어디에도 해당하지 않는 것
 
 category가 ir인 경우에만 priority를 의미 있게 판단하세요 (제목·발신자·본문 스니펫으로 볼 때 실제 검토할 만한 딜로 보이면 "높음"). 그 외 카테고리는 priority를 "낮음"으로 두세요.
+
+category가 ir인 경우, 이 스타트업이 속한 업종을 아래 도메인 중 하나로 판별해 domainId에 넣으세요 (제목·발신자·본문 스니펫에서 업종을 특정할 근거가 부족하면 "etc"):
+${domains.map((d) => `- ${d.id}: ${d.label}`).join("\n")}
+category가 ir이 아니면 domainId는 반드시 null로 두세요.
+
 반드시 submit_classification 도구(classify_mails)를 호출해 결과를 제출하세요. 입력된 모든 msgNum에 대해 결과를 채워야 합니다.`;
 
 /**
@@ -93,11 +110,23 @@ export function chunkMails(mails: MailSummary[], size: number = BATCH_SIZE): Mai
 /** Extracts the classify_mails tool-call input into a msgNum -> fields map. Shared by the live and Batch API paths. */
 export function parseClassifyToolInput(input: unknown): Map<number, ClassifyFields> {
   const results =
-    (input as { results?: Array<{ msgNum: number; category: MailCategory; reason: string; priority: "높음" | "중간" | "낮음" }> })
-      ?.results ?? [];
+    (input as {
+      results?: Array<{
+        msgNum: number;
+        category: MailCategory;
+        reason: string;
+        priority: "높음" | "중간" | "낮음";
+        domainId?: string | null;
+      }>;
+    })?.results ?? [];
   const map = new Map<number, ClassifyFields>();
   for (const r of results) {
-    map.set(r.msgNum, { category: r.category, reason: r.reason, priority: r.priority });
+    map.set(r.msgNum, {
+      category: r.category,
+      reason: r.reason,
+      priority: r.priority,
+      domainId: r.category === "ir" ? (r.domainId ?? null) : null,
+    });
   }
   return map;
 }
@@ -111,6 +140,7 @@ export function mergeClassifications(mails: MailSummary[], resultsByMsgNum: Map<
       category: result?.category ?? "etc",
       reason: result?.reason ?? "분류 실패 — 기본값(기타)으로 표시됨",
       priority: result?.priority ?? "낮음",
+      domainId: result?.domainId ?? null,
     };
   });
 }
