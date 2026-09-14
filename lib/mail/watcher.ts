@@ -60,6 +60,23 @@ export async function checkForNewMail(): Promise<WatchCheckResult> {
   return { totalInMailbox: total, newSinceLastAlert, alerted: false };
 }
 
+/**
+ * Sends a real Teams alert for the newest `count` mails right now, bypassing the threshold
+ * check — for manually testing the notification pipeline. Does NOT touch watch-state.json, so
+ * it never disturbs the real "new mail since last alert" tracking.
+ */
+export async function sendTestAlert(count: number): Promise<{ fetchedCount: number; alerted: boolean }> {
+  const mails = await fetchRecentMailSummaries(count);
+  const classified = await classifyMails(mails);
+  const appUrl = process.env.APP_BASE_URL || "http://localhost:3000";
+  const { reviewer, admin } = await sendTeamsNewMailAlert(classified, `${appUrl}/mailbox`);
+  console.log(
+    `[mail-watch] (테스트) 메일 ${mails.length}통으로 알림 전송 — 심사역용 ${reviewer.ok ? "성공" : reviewer.skipped ? "스킵" : "실패"}, ` +
+      `관리팀용 ${admin.ok ? "성공" : admin.skipped ? "스킵" : "실패"}`
+  );
+  return { fetchedCount: mails.length, alerted: reviewer.ok || admin.ok };
+}
+
 declare global {
   // eslint-disable-next-line no-var
   var __mailWatcherStarted: boolean | undefined;
