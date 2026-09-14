@@ -1,37 +1,9 @@
-import nodemailer from "nodemailer";
+// Sends via the Resend HTTPS API (https://resend.com) instead of raw SMTP — Railway (and many
+// PaaS hosts) block outbound SMTP ports entirely to prevent spam abuse, which made the earlier
+// nodemailer/smtp.whoisworks.com approach fail with ETIMEDOUT regardless of port. Resend only
+// needs outbound HTTPS (443), which is never blocked.
 
-let cachedTransporter: ReturnType<typeof nodemailer.createTransport> | null = null;
-
-/**
- * Lazily builds (and reuses) the SMTP transporter for the shared company mailbox.
- * secure/STARTTLS mode is derived from the port: 465 = implicit TLS, anything else = STARTTLS
- * (587 is the usual submission port). Some hosting platforms block outbound 587 but allow 465
- * (or vice versa) — set MAIL_SMTP_PORT=465 to switch if one is blocked.
- */
-function getTransporter() {
-  if (cachedTransporter) return cachedTransporter;
-
-  const host = process.env.MAIL_SMTP_HOST || "smtp.whoisworks.com";
-  const port = Number(process.env.MAIL_SMTP_PORT || 587);
-  const secure = port === 465;
-  const user = process.env.MAIL_USER;
-  const pass = process.env.MAIL_PASSWORD;
-  if (!user || !pass) {
-    throw new Error("메일 발신 계정(MAIL_USER/MAIL_PASSWORD)이 .env.local에 설정되어 있지 않습니다.");
-  }
-
-  cachedTransporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    requireTLS: !secure,
-    connectionTimeout: 20_000,
-    greetingTimeout: 20_000,
-    socketTimeout: 20_000,
-    auth: { user, pass },
-  });
-  return cachedTransporter;
-}
+const RESEND_API_URL = "https://api.resend.com/emails";
 
 export interface SendEmailParams {
   to: string;
@@ -45,19 +17,35 @@ export interface SendEmailResult {
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return { ok: false, error: "RESEND_API_KEY가 설정되어 있지 않습니다." };
+  }
+  // Without a verified sending domain in Resend, only their shared onboarding@resend.dev sender
+  // works — it can send to any recipient, so it's a fine default until a real domain is verified.
+  const from = process.env.RESEND_FROM_EMAIL || "AI 심사역 메일함 알림 <onboarding@resend.dev>";
+
   try {
-    const transporter = getTransporter();
-    const from = process.env.MAIL_USER;
-    await transporter.sendMail({
-      from: `"AI 심사역 메일함 알림" <${from}>`,
-      to: params.to,
-      subject: params.subject,
-      text: params.text,
+    const res = await fetch(RESEND_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [params.to],
+        subject: params.subject,
+        text: params.text,
+      }),
     });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `Resend ${res.status}: ${body.slice(0, 300)}` };
+    }
     return { ok: true };
   } catch (err) {
-    const code = (err as { code?: string } | null)?.code;
-    const message = err instanceof Error ? err.message : "알 수 없는 발송 오류";
-    return { ok: false, error: code ? `${message} (${code})` : message };
+    return { ok: false, error: err instanceof Error ? err.message : "알 수 없는 발송 오류" };
   }
 }
