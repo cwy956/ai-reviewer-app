@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PersonaDashboardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const persona = getPersonaById(id);
+  const persona = await getPersonaById(id);
   if (!persona) notFound();
 
   return (

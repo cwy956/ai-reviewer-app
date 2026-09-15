@@ -40,7 +40,7 @@ async function main() {
   const client = new Anthropic({ apiKey });
 
   for (;;) {
-    const pending = readPendingJob();
+    const pending = await readPendingJob();
     if (!pending) {
       console.log("대기 중인 백로그 작업이 없습니다. (이미 처리 완료됐거나, 아직 제출되지 않았습니다)");
       return;
@@ -75,16 +75,16 @@ async function main() {
       }
 
       const classified = mergeClassifications(pending.mails, merged);
-      writeBacklogCache({
+      await writeBacklogCache({
         processedAt: new Date().toISOString(),
         totalInMailbox: pending.totalInMailbox,
         mails: classified,
       });
-      clearPendingJob();
+      await clearPendingJob();
 
       console.log(
         `완료: 메일 ${classified.length}통 분류됨 (요청 성공 ${succeeded} / 실패 ${failed}). ` +
-          `lib/mail/backlog-cache.json 에 저장했습니다.`
+          `Supabase에 저장했습니다.`
       );
 
       const appUrl = process.env.APP_BASE_URL || "http://localhost:3000";

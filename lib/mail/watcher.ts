@@ -36,12 +36,12 @@ export interface WatchCheckResult {
  */
 export async function checkForNewMail(): Promise<WatchCheckResult> {
   const total = await countMessages();
-  const state = readWatchState();
+  const state = await readWatchState();
 
   if (!state) {
     // First ever check: baseline to the current count so we only alert on mail that arrives
     // from here on, not the entire pre-existing backlog.
-    writeWatchState({ lastAlertedCount: total, lastCheckedAt: new Date().toISOString(), lastAlertedAt: null });
+    await writeWatchState({ lastAlertedCount: total, lastCheckedAt: new Date().toISOString(), lastAlertedAt: null });
     return { totalInMailbox: total, newSinceLastAlert: 0, alerted: false };
   }
 
@@ -55,7 +55,7 @@ export async function checkForNewMail(): Promise<WatchCheckResult> {
     console.log(
       `[mail-watch] 메일함 통수가 줄어듦(${state.lastAlertedCount} → ${total}) — 기준점을 현재 통수로 재설정합니다.`
     );
-    writeWatchState({ lastAlertedCount: total, lastCheckedAt: new Date().toISOString(), lastAlertedAt: state.lastAlertedAt });
+    await writeWatchState({ lastAlertedCount: total, lastCheckedAt: new Date().toISOString(), lastAlertedAt: state.lastAlertedAt });
     return { totalInMailbox: total, newSinceLastAlert: 0, alerted: false };
   }
 
@@ -63,11 +63,11 @@ export async function checkForNewMail(): Promise<WatchCheckResult> {
     const newMails = await fetchRecentMailSummaries(newSinceLastAlert);
     const classified = await classifyMails(newMails);
     await dispatchAlerts(classified, "");
-    writeWatchState({ lastAlertedCount: total, lastCheckedAt: new Date().toISOString(), lastAlertedAt: new Date().toISOString() });
+    await writeWatchState({ lastAlertedCount: total, lastCheckedAt: new Date().toISOString(), lastAlertedAt: new Date().toISOString() });
     return { totalInMailbox: total, newSinceLastAlert, alerted: true };
   }
 
-  writeWatchState({ ...state, lastCheckedAt: new Date().toISOString() });
+  await writeWatchState({ ...state, lastCheckedAt: new Date().toISOString() });
   return { totalInMailbox: total, newSinceLastAlert, alerted: false };
 }
 

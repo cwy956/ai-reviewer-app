@@ -4,6 +4,6 @@ import { readSendLog } from "@/lib/mail/sendLogStore";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const entries = readSendLog().slice().reverse(); // newest first
+  const entries = await readSendLog(); // already newest-first
   return NextResponse.json({ entries });
 }

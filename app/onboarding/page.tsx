@@ -4,8 +4,8 @@ import { domainCategories } from "@/lib/domains";
 
 export const dynamic = "force-dynamic";
 
-export default function OnboardingListPage() {
-  const personas = listPersonas().filter((p) => !p.isDefault);
+export default async function OnboardingListPage() {
+  const personas = (await listPersonas()).filter((p) => !p.isDefault);
   const totalDomains = domainCategories.reduce((sum, c) => sum + c.domains.length, 0);
 
   return (

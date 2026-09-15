@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "personaId, domainId는 필수입니다." }, { status: 400 });
     }
 
-    const persona = upsertDomainCriteria(body.personaId, {
+    const persona = await upsertDomainCriteria(body.personaId, {
       domainId: body.domainId,
       starredCheckpointIds: body.starredCheckpointIds ?? [],
       freeform: body.freeform ?? "",

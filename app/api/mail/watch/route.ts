@@ -7,7 +7,7 @@ export const maxDuration = 120;
 
 /** Status of the background watcher — for the dashboard to display. */
 export async function GET() {
-  return NextResponse.json({ state: readWatchState() });
+  return NextResponse.json({ state: await readWatchState() });
 }
 
 /**

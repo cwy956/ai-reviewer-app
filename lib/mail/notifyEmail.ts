@@ -23,7 +23,7 @@ export interface EmailAlertResult {
  */
 export async function sendEmailAlerts(rawMails: ClassifiedMail[], dashboardUrl?: string): Promise<EmailAlertResult> {
   const mails = rawMails.filter((m) => !isInternalSender(m.from));
-  const groups = groupMailsByRecipient(mails);
+  const groups = await groupMailsByRecipient(mails);
 
   let sentGroups = 0;
   let failedGroups = 0;
@@ -54,7 +54,7 @@ export async function sendEmailAlerts(rawMails: ClassifiedMail[], dashboardUrl?:
     }
   }
 
-  appendSendLog(logEntries);
+  await appendSendLog(logEntries);
 
   // ir mail with a domainId but nobody covering it yet — not an error, just nothing to log a
   // recipient for; useful to surface as a count so gaps in reviewer coverage are visible.

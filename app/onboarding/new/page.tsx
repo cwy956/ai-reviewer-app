@@ -9,7 +9,7 @@ export default async function NewPersonaPage({
   searchParams: Promise<{ edit?: string }>;
 }) {
   const { edit } = await searchParams;
-  const initial = edit ? getPersonaById(edit) : undefined;
+  const initial = edit ? await getPersonaById(edit) : undefined;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12">

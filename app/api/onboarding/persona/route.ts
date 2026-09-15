@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "id, name, affiliation은 필수입니다." }, { status: 400 });
     }
 
-    const persona = upsertPersonaBase({
+    const persona = await upsertPersonaBase({
       id: body.id,
       name: body.name,
       affiliation: body.affiliation,

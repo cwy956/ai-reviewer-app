@@ -19,8 +19,8 @@ const ADMIN_CATEGORIES: MailCategory[] = ["gov_program", "biz_proposal", "etc"];
  * - spam: never routed anywhere.
  * Callers should already have filtered out internal-domain senders before calling this.
  */
-export function groupMailsByRecipient(mails: ClassifiedMail[]): RecipientGroup[] {
-  const personas = listPersonas();
+export async function groupMailsByRecipient(mails: ClassifiedMail[]): Promise<RecipientGroup[]> {
+  const personas = await listPersonas();
   const groups = new Map<string, RecipientGroup>();
 
   function addTo(email: string, personaName: string | undefined, mail: ClassifiedMail) {

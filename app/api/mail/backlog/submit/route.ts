@@ -13,7 +13,7 @@ export const maxDuration = 300;
  * and finalized by a separate standalone script that never touches POP3.
  */
 export async function POST(req: Request) {
-  const existing = readPendingJob();
+  const existing = await readPendingJob();
   if (existing) {
     return NextResponse.json(
       { error: "이미 처리 중인 백로그 작업이 있습니다.", pending: existing },
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     })),
   });
 
-  writePendingJob({
+  await writePendingJob({
     batchId: batch.id,
     submittedAt: new Date().toISOString(),
     totalInMailbox: total,
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const pending = readPendingJob();
+  const pending = await readPendingJob();
   if (!pending) {
     return NextResponse.json({ pending: null });
   }

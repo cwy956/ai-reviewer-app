@@ -1,13 +1,7 @@
-import fs from "fs";
-import path from "path";
+import { getSupabase } from "../db/supabaseClient";
 import type { Persona, PersonaDomainCriteria } from "./schema";
 
-const PERSONAS_DIR = path.join(process.cwd(), "lib", "personas");
 const ID_PATTERN = /^[a-z0-9-]+$/;
-
-function filePath(id: string): string {
-  return path.join(PERSONAS_DIR, `${id}.json`);
-}
 
 export function assertValidId(id: string): void {
   if (!ID_PATTERN.test(id)) {
@@ -15,51 +9,89 @@ export function assertValidId(id: string): void {
   }
 }
 
-export function listPersonas(): Persona[] {
-  const files = fs.readdirSync(PERSONAS_DIR).filter((f) => f.endsWith(".json"));
-  return files
-    .map((f) => {
-      const raw = fs.readFileSync(path.join(PERSONAS_DIR, f), "utf-8");
-      return JSON.parse(raw) as Persona;
-    })
-    .sort((a, b) => (a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1));
+interface PersonaRow {
+  id: string;
+  name: string;
+  affiliation: string;
+  bio: string;
+  email: string | null;
+  portfolio: string[];
+  is_default: boolean;
+  seven_principles: Persona["sevenPrinciples"] | null;
+  domain_criteria: PersonaDomainCriteria[];
 }
 
-export function getPersonaById(id: string): Persona | undefined {
-  try {
-    const raw = fs.readFileSync(filePath(id), "utf-8");
-    return JSON.parse(raw) as Persona;
-  } catch {
-    return undefined;
-  }
-}
-
-function writePersona(persona: Persona): void {
-  fs.writeFileSync(filePath(persona.id), JSON.stringify(persona, null, 2) + "\n", "utf-8");
-}
-
-export function upsertPersonaBase(base: Omit<Persona, "domainCriteria">): Persona {
-  assertValidId(base.id);
-  const existing = getPersonaById(base.id);
-  const persona: Persona = {
-    ...base,
-    domainCriteria: existing?.domainCriteria ?? [],
+function rowToPersona(row: PersonaRow): Persona {
+  return {
+    id: row.id,
+    name: row.name,
+    affiliation: row.affiliation,
+    bio: row.bio,
+    email: row.email ?? undefined,
+    portfolio: row.portfolio ?? [],
+    isDefault: row.is_default,
+    sevenPrinciples: row.seven_principles ?? undefined,
+    domainCriteria: row.domain_criteria ?? [],
   };
-  writePersona(persona);
-  return persona;
 }
 
-export function upsertDomainCriteria(
-  personaId: string,
-  criteria: PersonaDomainCriteria
-): Persona {
-  const existing = getPersonaById(personaId);
+export async function listPersonas(): Promise<Persona[]> {
+  const { data, error } = await getSupabase()
+    .from("personas")
+    .select("*")
+    .order("is_default", { ascending: false });
+  if (error) throw new Error(`심사역 목록 조회 실패: ${error.message}`);
+  return (data as PersonaRow[]).map(rowToPersona);
+}
+
+export async function getPersonaById(id: string): Promise<Persona | undefined> {
+  const { data, error } = await getSupabase().from("personas").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`심사역 조회 실패: ${error.message}`);
+  return data ? rowToPersona(data as PersonaRow) : undefined;
+}
+
+export async function upsertPersonaBase(base: Omit<Persona, "domainCriteria">): Promise<Persona> {
+  assertValidId(base.id);
+  const existing = await getPersonaById(base.id);
+  const domainCriteria = existing?.domainCriteria ?? [];
+
+  const { data, error } = await getSupabase()
+    .from("personas")
+    .upsert(
+      {
+        id: base.id,
+        name: base.name,
+        affiliation: base.affiliation,
+        bio: base.bio,
+        email: base.email ?? null,
+        portfolio: base.portfolio,
+        is_default: base.isDefault,
+        seven_principles: base.sevenPrinciples ?? null,
+        domain_criteria: domainCriteria,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" }
+    )
+    .select()
+    .single();
+  if (error) throw new Error(`심사역 저장 실패: ${error.message}`);
+  return rowToPersona(data as PersonaRow);
+}
+
+export async function upsertDomainCriteria(personaId: string, criteria: PersonaDomainCriteria): Promise<Persona> {
+  const existing = await getPersonaById(personaId);
   if (!existing) {
     throw new Error(`심사역을 찾을 수 없습니다: ${personaId}`);
   }
   const domainCriteria = existing.domainCriteria.filter((c) => c.domainId !== criteria.domainId);
   domainCriteria.push(criteria);
-  const persona: Persona = { ...existing, domainCriteria };
-  writePersona(persona);
-  return persona;
+
+  const { data, error } = await getSupabase()
+    .from("personas")
+    .update({ domain_criteria: domainCriteria, updated_at: new Date().toISOString() })
+    .eq("id", personaId)
+    .select()
+    .single();
+  if (error) throw new Error(`영역별 기준 저장 실패: ${error.message}`);
+  return rowToPersona(data as PersonaRow);
 }

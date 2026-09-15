@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     }
 
     const domain = getDomain(domainId);
-    const persona = getPersona(personaId);
+    const persona = await getPersona(personaId);
     if (!domain) {
       return NextResponse.json({ error: "알 수 없는 영역입니다." }, { status: 400 });
     }

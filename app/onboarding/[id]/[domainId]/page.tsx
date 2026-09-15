@@ -11,7 +11,7 @@ export default async function DomainCheckpointPage({
   params: Promise<{ id: string; domainId: string }>;
 }) {
   const { id, domainId } = await params;
-  const persona = getPersonaById(id);
+  const persona = await getPersonaById(id);
   const domain = getDomain(domainId);
   if (!persona || !domain) notFound();
 
