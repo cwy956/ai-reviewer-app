@@ -85,14 +85,8 @@ export default function Home() {
           투자 자문이 아니라, 자료를 다듬는 참고용이에요.
         </p>
         <div className="mt-4 flex items-center justify-center gap-4 text-xs">
-          <a href="/onboarding" className="text-muted underline hover:text-accent-soft">
-            심사역이신가요? 심사 기준 등록하러 가기 →
-          </a>
-          <a href="/mailbox" className="text-muted underline hover:text-accent-soft">
-            메일함 자동 분류 보기 →
-          </a>
-          <a href="/dashboard" className="text-muted underline hover:text-accent-soft">
-            현황 대시보드 보기 →
+          <a href="/internal-login" className="text-muted underline hover:text-accent-soft">
+            안다아시아벤처스 직원이신가요? 로그인 →
           </a>
         </div>
       </header>
