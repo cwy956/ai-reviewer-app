@@ -91,6 +91,9 @@ export default function Home() {
           <a href="/mailbox" className="text-muted underline hover:text-accent-soft">
             메일함 자동 분류 보기 →
           </a>
+          <a href="/dashboard" className="text-muted underline hover:text-accent-soft">
+            현황 대시보드 보기 →
+          </a>
         </div>
       </header>
 
