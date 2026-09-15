@@ -4,8 +4,6 @@ import { sendEmailAlerts } from "./notifyEmail";
 import { readWatchState, writeWatchState } from "./watchStore";
 
 const THRESHOLD = Number(process.env.MAIL_WATCH_THRESHOLD || 5);
-const INTERVAL_MINUTES = Number(process.env.MAIL_WATCH_INTERVAL_MINUTES || 5);
-const INTERVAL_MS = INTERVAL_MINUTES * 60_000;
 
 /** Fans a classified batch out to reviewers/admin by email and logs the outcome. */
 async function dispatchAlerts(classified: ClassifiedMail[], label: string) {
@@ -81,24 +79,4 @@ export async function sendTestAlert(count: number): Promise<{ fetchedCount: numb
   const classified = await classifyMails(mails);
   const { email } = await dispatchAlerts(classified, " (테스트)");
   return { fetchedCount: mails.length, alerted: email.sentGroups > 0 };
-}
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __mailWatcherStarted: boolean | undefined;
-}
-
-/** Starts the periodic check. Guarded so Turbopack HMR / multiple imports never create duplicate timers. */
-export function startMailWatcher(): void {
-  if (typeof process === "undefined" || globalThis.__mailWatcherStarted) return;
-  if (!process.env.MAIL_HOST || !process.env.MAIL_USER || !process.env.MAIL_PASSWORD) {
-    console.log("[mail-watch] 메일 환경변수가 없어 자동 감시를 시작하지 않습니다.");
-    return;
-  }
-  globalThis.__mailWatcherStarted = true;
-
-  console.log(`[mail-watch] 시작 — ${INTERVAL_MINUTES}분마다 확인, 새 메일 ${THRESHOLD}통 이상 쌓이면 이메일 알림`);
-  setInterval(() => {
-    checkForNewMail().catch((err) => console.error("[mail-watch] 확인 중 오류:", err instanceof Error ? err.message : err));
-  }, INTERVAL_MS);
 }
