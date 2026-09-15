@@ -205,6 +205,9 @@ export default function MailboxPage() {
         >
           이메일 발송 이력 보기 →
         </a>
+        <a href="/dashboard" className="mt-3 ml-4 inline-block text-xs text-muted underline hover:text-accent-soft">
+          현황 대시보드 보기 →
+        </a>
       </header>
 
       <div className="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-panel-border bg-panel p-4">
