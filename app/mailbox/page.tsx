@@ -270,7 +270,7 @@ export default function MailboxPage() {
 
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-panel-border bg-panel p-4">
         <div className="flex-1 text-xs text-muted">
-          앞으로 들어오는 신규 메일은 서버가 5분마다 자동으로 확인해서, 처리 안 된 메일이 5통 이상 쌓이면 담당자에게 이메일로 알려줍니다.
+          앞으로 들어오는 신규 메일은 매일 아침(09:00) 자동으로 확인해서, 처리 안 된 메일이 5통 이상 쌓이면 담당자에게 이메일로 알려줍니다.
           {watchState && (
             <span className="ml-1 text-muted/70">
               (마지막 확인: {formatDate(watchState.lastCheckedAt)}
