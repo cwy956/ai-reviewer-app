@@ -1,6 +1,5 @@
 import { countMessages, fetchRecentMailSummaries } from "./client";
 import { classifyMails, type ClassifiedMail } from "./classify";
-import { sendTeamsNewMailAlert } from "./notifyTeams";
 import { sendEmailAlerts } from "./notifyEmail";
 import { readWatchState, writeWatchState } from "./watchStore";
 
@@ -8,23 +7,19 @@ const THRESHOLD = Number(process.env.MAIL_WATCH_THRESHOLD || 5);
 const INTERVAL_MINUTES = Number(process.env.MAIL_WATCH_INTERVAL_MINUTES || 5);
 const INTERVAL_MS = INTERVAL_MINUTES * 60_000;
 
-/** Fans a classified batch out to both notification channels and logs the outcome of each. */
+/** Fans a classified batch out to reviewers/admin by email and logs the outcome. */
 async function dispatchAlerts(classified: ClassifiedMail[], label: string) {
   const appUrl = process.env.APP_BASE_URL || "http://localhost:3000";
   const dashboardUrl = `${appUrl}/mailbox`;
 
-  const [teams, email] = await Promise.all([
-    sendTeamsNewMailAlert(classified, dashboardUrl),
-    sendEmailAlerts(classified, dashboardUrl),
-  ]);
+  const email = await sendEmailAlerts(classified, dashboardUrl);
 
   console.log(
-    `[mail-watch]${label} 메일 ${classified.length}통 알림 — Teams: 심사역용 ${teams.reviewer.ok ? "성공" : teams.reviewer.skipped ? "스킵" : "실패"}, ` +
-      `관리팀용 ${teams.admin.ok ? "성공" : teams.admin.skipped ? "스킵" : "실패"} | ` +
-      `이메일: ${email.sentGroups}명 성공, ${email.failedGroups}명 실패, 담당자 없어 스킵 ${email.skippedNoRecipient}건`
+    `[mail-watch]${label} 메일 ${classified.length}통 알림 — 이메일: ${email.sentGroups}명 성공, ` +
+      `${email.failedGroups}명 실패, 담당자 없어 스킵 ${email.skippedNoRecipient}건`
   );
 
-  return { teams, email };
+  return { email };
 }
 
 export interface WatchCheckResult {
@@ -36,7 +31,8 @@ export interface WatchCheckResult {
 /**
  * Polls the mailbox message count (cheap — one POP3 STAT command) and, once at least
  * THRESHOLD new messages have arrived since the last alert, fetches + classifies just that
- * new batch and sends a Teams alert. Never touches messages that were already accounted for.
+ * new batch and emails the reviewers/admin who cover it. Never touches messages that were
+ * already accounted for.
  */
 export async function checkForNewMail(): Promise<WatchCheckResult> {
   const total = await countMessages();
@@ -76,15 +72,15 @@ export async function checkForNewMail(): Promise<WatchCheckResult> {
 }
 
 /**
- * Sends a real Teams alert for the newest `count` mails right now, bypassing the threshold
+ * Sends a real email alert for the newest `count` mails right now, bypassing the threshold
  * check — for manually testing the notification pipeline. Does NOT touch watch-state.json, so
  * it never disturbs the real "new mail since last alert" tracking.
  */
 export async function sendTestAlert(count: number): Promise<{ fetchedCount: number; alerted: boolean }> {
   const mails = await fetchRecentMailSummaries(count);
   const classified = await classifyMails(mails);
-  const { teams, email } = await dispatchAlerts(classified, " (테스트)");
-  return { fetchedCount: mails.length, alerted: teams.reviewer.ok || teams.admin.ok || email.sentGroups > 0 };
+  const { email } = await dispatchAlerts(classified, " (테스트)");
+  return { fetchedCount: mails.length, alerted: email.sentGroups > 0 };
 }
 
 declare global {
@@ -101,7 +97,7 @@ export function startMailWatcher(): void {
   }
   globalThis.__mailWatcherStarted = true;
 
-  console.log(`[mail-watch] 시작 — ${INTERVAL_MINUTES}분마다 확인, 새 메일 ${THRESHOLD}통 이상 쌓이면 Teams 알림`);
+  console.log(`[mail-watch] 시작 — ${INTERVAL_MINUTES}분마다 확인, 새 메일 ${THRESHOLD}통 이상 쌓이면 이메일 알림`);
   setInterval(() => {
     checkForNewMail().catch((err) => console.error("[mail-watch] 확인 중 오류:", err instanceof Error ? err.message : err));
   }, INTERVAL_MS);

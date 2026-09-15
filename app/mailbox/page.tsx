@@ -72,7 +72,7 @@ export default function MailboxPage() {
       if (!res.ok) throw new Error(data.error || "확인에 실패했습니다.");
       setWatchMsg(
         data.alerted
-          ? `새 메일 ${data.newSinceLastAlert}통 감지 — Teams 알림을 보냈습니다.`
+          ? `새 메일 ${data.newSinceLastAlert}통 감지 — 담당자에게 이메일을 보냈습니다.`
           : `새 메일 ${data.newSinceLastAlert}통 (아직 알림 기준 미달, 전체 ${data.totalInMailbox}통).`
       );
       const statusRes = await fetch("/api/mail/watch");
@@ -129,23 +129,6 @@ export default function MailboxPage() {
         `제출됨: 메일 ${data.submittedCount}통 (${data.chunkCount}개 배치) · batch ID ${data.batchId}. ` +
           `터미널에서 "npx tsx scripts/finalize-backlog.mts"를 실행해 완료를 기다려주세요.`
       );
-    } catch (err) {
-      setSubmitMsg(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function sendTeamsDigest() {
-    setSubmitting(true);
-    setSubmitMsg(null);
-    try {
-      const res = await fetch("/api/mail/notify-teams", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Teams 전송에 실패했습니다.");
-      const describe = (label: string, r: { ok: boolean; skipped?: boolean; error?: string }) =>
-        r.ok ? `${label} 전송됨` : r.skipped ? `${label} 웹훅 미설정` : `${label} 실패(${r.error ?? "알 수 없음"})`;
-      setSubmitMsg(`${describe("심사역용", data.reviewer)} · ${describe("관리팀용", data.admin)}`);
     } catch (err) {
       setSubmitMsg(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
     } finally {
@@ -280,13 +263,6 @@ export default function MailboxPage() {
         >
           {checkingStatus ? "확인 중..." : "진행 상태 확인"}
         </button>
-        <button
-          onClick={sendTeamsDigest}
-          disabled={submitting}
-          className="rounded-lg border border-panel-border px-4 py-2 text-sm text-muted transition enabled:hover:border-accent-soft/60 enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Teams로 지금 요약 보내기
-        </button>
       </div>
       {submitMsg && (
         <p className="mb-6 rounded-md border border-panel-border bg-panel px-4 py-3 text-xs text-muted">{submitMsg}</p>
@@ -294,7 +270,7 @@ export default function MailboxPage() {
 
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-panel-border bg-panel p-4">
         <div className="flex-1 text-xs text-muted">
-          앞으로 들어오는 신규 메일은 서버가 5분마다 자동으로 확인해서, 처리 안 된 메일이 5통 이상 쌓이면 Teams로 알려줍니다.
+          앞으로 들어오는 신규 메일은 서버가 5분마다 자동으로 확인해서, 처리 안 된 메일이 5통 이상 쌓이면 담당자에게 이메일로 알려줍니다.
           {watchState && (
             <span className="ml-1 text-muted/70">
               (마지막 확인: {formatDate(watchState.lastCheckedAt)}

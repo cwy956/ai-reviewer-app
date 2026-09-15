@@ -12,7 +12,7 @@ export async function GET() {
 
 /**
  * Forces one check-and-maybe-alert cycle immediately, without waiting for the interval timer.
- * Pass ?test=1 (optionally &count=N, default 5) to force-send a real Teams alert using the
+ * Pass ?test=1 (optionally &count=N, default 5) to force-send a real email alert using the
  * newest N mails right now, without touching the real watch-state baseline — for demos/testing.
  */
 export async function POST(req: Request) {

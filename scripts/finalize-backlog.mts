@@ -19,7 +19,7 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 const { readPendingJob, writeBacklogCache, clearPendingJob } = await import("../lib/mail/backlogStore");
 const { parseClassifyToolInput, mergeClassifications } = await import("../lib/mail/classify");
-const { sendTeamsBacklogDigest } = await import("../lib/mail/notifyTeams");
+const { sendEmailAlerts } = await import("../lib/mail/notifyEmail");
 type ClassifyFields = ReturnType<typeof parseClassifyToolInput> extends Map<number, infer V> ? V : never;
 
 function sleep(ms: number) {
@@ -88,23 +88,11 @@ async function main() {
       );
 
       const appUrl = process.env.APP_BASE_URL || "http://localhost:3000";
-      const { reviewer, admin } = await sendTeamsBacklogDigest({
-        totalInMailbox: pending.totalInMailbox,
-        mails: classified,
-        dashboardUrl: `${appUrl}/mailbox`,
-      });
-      for (const [label, result] of [
-        ["심사역용", reviewer],
-        ["관리팀용", admin],
-      ] as const) {
-        if (result.ok) {
-          console.log(`Teams(${label}) 전송 완료.`);
-        } else if (result.skipped) {
-          console.log(`Teams(${label}) 웹훅 미설정 — 스킵.`);
-        } else {
-          console.log(`Teams(${label}) 전송 실패: ${result.error ?? result.status}`);
-        }
-      }
+      const emailResult = await sendEmailAlerts(classified, `${appUrl}/mailbox`);
+      console.log(
+        `이메일 알림: ${emailResult.sentGroups}명 성공, ${emailResult.failedGroups}명 실패, ` +
+          `담당자 없어 스킵 ${emailResult.skippedNoRecipient}건`
+      );
       return;
     }
 

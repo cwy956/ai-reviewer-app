@@ -19,7 +19,7 @@ export interface EmailAlertResult {
 /**
  * Sends one email per recipient (reviewer persona or admin team), grouping every mail routed
  * to them into a single message, and logs each mail's send outcome to send-log.json for the
- * "발송 여부" dashboard. Internal-domain senders are dropped before routing, same as the Teams path.
+ * "발송 여부" dashboard. Internal-domain senders are dropped before routing.
  */
 export async function sendEmailAlerts(rawMails: ClassifiedMail[], dashboardUrl?: string): Promise<EmailAlertResult> {
   const mails = rawMails.filter((m) => !isInternalSender(m.from));
