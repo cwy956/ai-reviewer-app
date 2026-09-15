@@ -196,8 +196,8 @@ export default function MailboxPage() {
         <p className="mt-2 text-sm text-muted">
           공용 메일함(POP3)에서 최근 메일을 가져와 IR·투자관련 / 정부지원사업 / 협업제안 / 스팸 / 기타로 자동 분류합니다.
         </p>
-        <a href="/" className="mt-3 inline-block text-xs text-muted underline hover:text-accent-soft">
-          ← IR 평가 앱으로
+        <a href="/internal-evaluate" className="mt-3 inline-block text-xs text-muted underline hover:text-accent-soft">
+          AI 심사역으로 IR 평가하기 →
         </a>
         <a
           href="/mailbox/sent"

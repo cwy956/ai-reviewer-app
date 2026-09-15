@@ -72,9 +72,14 @@ export default function DashboardPage() {
       <header className="mb-8">
         <h1 className="text-2xl font-bold text-accent-soft">메일함 현황 대시보드</h1>
         <p className="mt-2 text-sm text-muted">메일 분류·발송이 실제로 잘 돌고 있는지, 놓치고 있는 건 없는지 한눈에 봅니다.</p>
-        <a href="/mailbox" className="mt-3 inline-block text-xs text-muted underline hover:text-accent-soft">
-          ← 메일함 자동 분류로
-        </a>
+        <div className="mt-3 flex gap-4 text-xs">
+          <a href="/mailbox" className="text-muted underline hover:text-accent-soft">
+            ← 메일함 자동 분류로
+          </a>
+          <a href="/internal-evaluate" className="text-muted underline hover:text-accent-soft">
+            AI 심사역으로 IR 평가하기 →
+          </a>
+        </div>
       </header>
 
       {loading && <p className="text-sm text-muted">불러오는 중...</p>}

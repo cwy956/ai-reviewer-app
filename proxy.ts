@@ -4,7 +4,15 @@ import { NextResponse, type NextRequest } from "next/server";
 // IR-evaluation page at "/". Gated behind a single shared password entered on /internal-login,
 // stored as a plain cookie (httpOnly + secure) — simple, no user accounts, matches the
 // "internal tool" scope of this app.
-const PROTECTED_PREFIXES = ["/onboarding", "/mailbox", "/dashboard", "/api/onboarding", "/api/mail", "/api/dashboard"];
+const PROTECTED_PREFIXES = [
+  "/onboarding",
+  "/mailbox",
+  "/dashboard",
+  "/internal-evaluate",
+  "/api/onboarding",
+  "/api/mail",
+  "/api/dashboard",
+];
 const AUTH_COOKIE = "internal_auth";
 
 function isProtectedPath(pathname: string): boolean {
@@ -40,5 +48,13 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/onboarding/:path*", "/mailbox/:path*", "/dashboard", "/api/onboarding/:path*", "/api/mail/:path*", "/api/dashboard"],
+  matcher: [
+    "/onboarding/:path*",
+    "/mailbox/:path*",
+    "/dashboard",
+    "/internal-evaluate",
+    "/api/onboarding/:path*",
+    "/api/mail/:path*",
+    "/api/dashboard",
+  ],
 };

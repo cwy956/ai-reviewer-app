@@ -7,14 +7,51 @@ import type { EvaluationReport } from "./reportSchema";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
-const REPORT_TOOL: Anthropic.Tool = {
-  name: "submit_report",
-  description: "IR 평가 결과를 구조화된 형태로 제출합니다.",
-  strict: true,
-  input_schema: {
-    type: "object",
-    additionalProperties: false,
-    properties: {
+const CITED_POINT_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    text: { type: "string" },
+    pageRefs: { type: "array", items: { type: "integer" } },
+  },
+  required: ["text", "pageRefs"],
+} as const;
+
+const INVESTMENT_ATTRACTIVENESS_SCHEMA = {
+  type: "object",
+  description:
+    "내부 심사역 전용 투자 매력도 진단. industryFit/categoryScores와 달리 투자 판단 언어를 명시적으로 허용함.",
+  additionalProperties: false,
+  properties: {
+    overallScore: { type: "integer", description: "0에서 100 사이, 종합 투자 매력도 점수" },
+    summary: { type: "string", description: "투자 관점 종합 총평" },
+    criteria: {
+      type: "array",
+      description: "정확히 5개 원소 (market, competitiveAdvantage, teamExecution, traction, valuationFit 각 1개씩)",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          criterion: {
+            type: "string",
+            enum: ["market", "competitiveAdvantage", "teamExecution", "traction", "valuationFit"],
+          },
+          criterionLabel: { type: "string" },
+          score: { type: "integer" },
+          rationale: { type: "string" },
+          pageRefs: { type: "array", items: { type: "integer" } },
+        },
+        required: ["criterion", "criterionLabel", "score", "rationale", "pageRefs"],
+      },
+    },
+    strongPoints: { type: "array", items: CITED_POINT_SCHEMA },
+    concerns: { type: "array", items: CITED_POINT_SCHEMA },
+  },
+  required: ["overallScore", "summary", "criteria", "strongPoints", "concerns"],
+} as const;
+
+function buildReportTool(mode: "external" | "internal"): Anthropic.Tool {
+  const properties: Record<string, unknown> = {
       totalScore: { type: "integer", description: "0에서 100 사이의 점수" },
       verdictTag: { type: "string", description: "예: 'Pre-A 적합'" },
       verdictSummary: { type: "string", description: "한 줄 총평" },
@@ -136,22 +173,39 @@ const REPORT_TOOL: Anthropic.Tool = {
         type: "array",
         items: { type: "string" },
       },
+  };
+
+  const required = [
+    "totalScore",
+    "verdictTag",
+    "verdictSummary",
+    "stageAssessment",
+    "categoryScores",
+    "strengths",
+    "improvements",
+    "industryFit",
+    "storyline",
+    "actionPlan",
+    "reviewerQuestions",
+  ];
+
+  if (mode === "internal") {
+    properties.investmentAttractiveness = INVESTMENT_ATTRACTIVENESS_SCHEMA;
+    required.push("investmentAttractiveness");
+  }
+
+  return {
+    name: "submit_report",
+    description: "IR 평가 결과를 구조화된 형태로 제출합니다.",
+    strict: true,
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      properties,
+      required,
     },
-    required: [
-      "totalScore",
-      "verdictTag",
-      "verdictSummary",
-      "stageAssessment",
-      "categoryScores",
-      "strengths",
-      "improvements",
-      "industryFit",
-      "storyline",
-      "actionPlan",
-      "reviewerQuestions",
-    ],
-  },
-};
+  };
+}
 
 function normalizeCategoryScores(value: unknown): EvaluationReport["categoryScores"] {
   if (Array.isArray(value)) return value as EvaluationReport["categoryScores"];
@@ -180,7 +234,8 @@ export async function evaluateIr(
   persona: Persona,
   domain: Domain,
   markedText: string,
-  dealInfo: DealInfo
+  dealInfo: DealInfo,
+  mode: "external" | "internal" = "external"
 ): Promise<EvaluationReport> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -188,8 +243,9 @@ export async function evaluateIr(
   }
 
   const client = new Anthropic({ apiKey });
-  const system = buildSystemPrompt(persona, domain);
+  const system = buildSystemPrompt(persona, domain, mode);
   const userMessage = buildUserMessage(markedText, dealInfo);
+  const reportTool = buildReportTool(mode);
 
   const attempt = async (): Promise<EvaluationReport> => {
     const response = await client.messages.create({
@@ -197,7 +253,7 @@ export async function evaluateIr(
       max_tokens: 8000,
       system,
       messages: [{ role: "user", content: userMessage }],
-      tools: [REPORT_TOOL],
+      tools: [reportTool],
       tool_choice: { type: "tool", name: "submit_report" },
     });
 

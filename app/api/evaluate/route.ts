@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { parsePdf } from "@/lib/parsePdf";
 import { evaluateIr } from "@/lib/evaluate";
 import { getDomain } from "@/lib/domains";
@@ -8,12 +9,23 @@ import type { DealInfo } from "@/lib/buildPrompt";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
+async function isInternalRequest(): Promise<boolean> {
+  const password = process.env.INTERNAL_ACCESS_PASSWORD;
+  if (!password) return false;
+  const cookieStore = await cookies();
+  return cookieStore.get("internal_auth")?.value === password;
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
     const domainId = formData.get("domainId");
     const personaId = formData.get("personaId");
+    const requestedMode = formData.get("mode") === "internal" ? "internal" : "external";
+    // Never trust the client-supplied mode alone — the internal-only investment-attractiveness
+    // axis must not leak to anonymous startups hitting this same public endpoint from "/".
+    const mode = requestedMode === "internal" && (await isInternalRequest()) ? "internal" : "external";
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "IR 파일이 필요합니다." }, { status: 400 });
@@ -43,7 +55,7 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const parsed = await parsePdf(buffer);
 
-    const report = await evaluateIr(persona, domain, parsed.markedText, dealInfo);
+    const report = await evaluateIr(persona, domain, parsed.markedText, dealInfo, mode);
 
     return NextResponse.json({
       report,

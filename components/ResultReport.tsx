@@ -6,6 +6,7 @@ import { RadarScoreChart } from "./RadarScoreChart";
 import { StageFitBar } from "./StageFitBar";
 import { StrengthsImprovements } from "./StrengthsImprovements";
 import { IndustryFitPanel } from "./IndustryFitPanel";
+import { InvestmentAttractivenessPanel } from "./InvestmentAttractivenessPanel";
 import { StorylineTimeline } from "./StorylineTimeline";
 import { ActionPlanList } from "./ActionPlanList";
 import { ReviewerQuestions } from "./ReviewerQuestions";
@@ -55,11 +56,13 @@ export function ResultReport({
   reviewerName,
   reviewerAffiliation,
   onReset,
+  internalMode = false,
 }: {
   report: EvaluationReport;
   reviewerName: string;
   reviewerAffiliation: string;
   onReset: () => void;
+  internalMode?: boolean;
 }) {
   const [emailSent, setEmailSent] = useState<string | null>(null);
   const eligible = report.totalScore >= EMAIL_GATE_SCORE;
@@ -92,37 +95,42 @@ export function ResultReport({
       <StageFitBar stageAssessment={report.stageAssessment} />
       <StrengthsImprovements strengths={report.strengths} improvements={report.improvements} />
       <IndustryFitPanel industryFit={report.industryFit} />
+      {report.investmentAttractiveness && (
+        <InvestmentAttractivenessPanel investmentAttractiveness={report.investmentAttractiveness} />
+      )}
       <CategoryDetail categoryScores={report.categoryScores} />
       <StorylineTimeline storyline={report.storyline} />
       <PeerResearchPlaceholder />
       <ActionPlanList actionPlan={report.actionPlan} />
       <ReviewerQuestions questions={report.reviewerQuestions} />
 
-      <div className="rounded-lg border border-panel-border bg-panel p-5">
-        {eligible ? (
-          <>
-            <button
-              onClick={() => setEmailSent(`${reviewerName} (${reviewerAffiliation}) 심사역님께 전달 준비가 완료되었습니다.`)}
-              className="w-full rounded-lg bg-accent px-4 py-3 font-semibold text-white transition hover:bg-accent-soft"
-            >
-              이 심사역에게 메일로 IR 보내기
-            </button>
-            {emailSent && (
-              <p className="mt-2 text-center text-sm text-good">
-                {emailSent} (데모 버전에서는 실제로 발송되지 않습니다.)
+      {!internalMode && (
+        <div className="rounded-lg border border-panel-border bg-panel p-5">
+          {eligible ? (
+            <>
+              <button
+                onClick={() => setEmailSent(`${reviewerName} (${reviewerAffiliation}) 심사역님께 전달 준비가 완료되었습니다.`)}
+                className="w-full rounded-lg bg-accent px-4 py-3 font-semibold text-white transition hover:bg-accent-soft"
+              >
+                이 심사역에게 메일로 IR 보내기
+              </button>
+              {emailSent && (
+                <p className="mt-2 text-center text-sm text-good">
+                  {emailSent} (데모 버전에서는 실제로 발송되지 않습니다.)
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="rounded-md border border-warn/30 bg-warn/10 p-4 text-sm text-warn">
+              <p className="font-medium">{EMAIL_GATE_SCORE}점을 넘겨야만 해당 심사역에게 메일을 보낼 수 있어요.</p>
+              <p className="mt-1 text-warn/80">
+                현재 종합 점수는 {report.totalScore}점이에요 (기준 {EMAIL_GATE_SCORE}점). Action Plan을 수행해서 점수를
+                올려보세요!
               </p>
-            )}
-          </>
-        ) : (
-          <div className="rounded-md border border-warn/30 bg-warn/10 p-4 text-sm text-warn">
-            <p className="font-medium">{EMAIL_GATE_SCORE}점을 넘겨야만 해당 심사역에게 메일을 보낼 수 있어요.</p>
-            <p className="mt-1 text-warn/80">
-              현재 종합 점수는 {report.totalScore}점이에요 (기준 {EMAIL_GATE_SCORE}점). Action Plan을 수행해서 점수를
-              올려보세요!
-            </p>
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <button
         onClick={onReset}

@@ -39,6 +39,29 @@ export interface IndustryFitAssessment {
   concerns: CitedPoint[];
 }
 
+/**
+ * Internal-only axis (never shown to the startup on the public page). Unlike industryFit,
+ * this one is explicitly allowed to judge investment attractiveness — it's for our own
+ * reviewers deciding whether to pursue a deal, not documentation feedback for the founder.
+ * Criteria are a placeholder starter set; expected to be recalibrated once real 투심보고서
+ * examples are available to learn what 안다아시아벤처스 actually weighs.
+ */
+export interface InvestmentCriterionAssessment {
+  criterion: "market" | "competitiveAdvantage" | "teamExecution" | "traction" | "valuationFit";
+  criterionLabel: string;
+  score: number;
+  rationale: string;
+  pageRefs: number[];
+}
+
+export interface InvestmentAttractivenessAssessment {
+  overallScore: number;
+  summary: string;
+  criteria: InvestmentCriterionAssessment[];
+  strongPoints: CitedPoint[];
+  concerns: CitedPoint[];
+}
+
 export interface EvaluationReport {
   totalScore: number;
   verdictTag: string;
@@ -52,6 +75,7 @@ export interface EvaluationReport {
   strengths: CitedPoint[];
   improvements: CitedPoint[];
   industryFit: IndustryFitAssessment;
+  investmentAttractiveness?: InvestmentAttractivenessAssessment;
   storyline: StorylineStep[];
   actionPlan: ActionItem[];
   reviewerQuestions: string[];

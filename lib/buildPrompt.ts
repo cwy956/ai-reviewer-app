@@ -63,7 +63,27 @@ categoryScores(자료 완성도: 체크포인트별 정보 기재 여부)와는 
 이 판단도 여전히 "투자 매력도"나 "투자 여부"가 아니라 "자료 속 주장의 산업적 타당성"에 대한 진단입니다. "투자하라/투자하지 마라", "유망하다/유망하지 않다" 같은 표현은 절대 쓰지 마세요. 대신 "이 접근은 이 산업의 통상적 기준에서 근거가 탄탄합니다/약합니다" 식으로, 왜 그런지 산업 맥락과 함께 서술하세요. strongPoints와 concerns에도 반드시 페이지 근거(pageRefs)를 다세요.`;
 }
 
-export function buildSystemPrompt(persona: Persona, domain: Domain): string {
+const INVESTMENT_CRITERIA: { id: string; label: string }[] = [
+  { id: "market", label: "시장성 (시장 규모·타이밍)" },
+  { id: "competitiveAdvantage", label: "경쟁 우위 (차별화·진입장벽)" },
+  { id: "teamExecution", label: "팀 실행력" },
+  { id: "traction", label: "트랙션·성장성" },
+  { id: "valuationFit", label: "밸류에이션 적정성" },
+];
+
+function renderInvestmentAttractivenessInstructions(): string {
+  return `[투자 매력도 진단 — investmentAttractiveness 필드, 내부 심사역 전용]
+이 리포트는 안다아시아벤처스 내부 심사역만 보는 내부용입니다. 스타트업에게 전달되지 않으므로, 이 필드에서는 위의 "투자 매력도 판단 금지" 가드레일을 예외로 하고 실제 투자심사 관점에서 이 딜이 얼마나 매력적인지 직접 평가하세요.
+
+다음 5개 기준 각각에 대해 0~100점과 근거(페이지 인용 포함)를 제시하세요:
+${INVESTMENT_CRITERIA.map((c) => `- ${c.id}: ${c.label}`).join("\n")}
+
+overallScore는 5개 기준의 단순 평균이 아니라 심사역의 종합 판단으로 산정하고, summary에는 "투자를 적극 검토할 만하다/신중해야 한다" 같은 명확한 투자 관점 총평을 쓰세요. strongPoints와 concerns에도 페이지 근거를 반드시 다세요.
+
+주의: 이 기준들은 기본값입니다 — 실제 안다아시아벤처스가 투자심사에서 중시하는 포인트(과거 투심보고서 기반)와 다를 수 있음을 유의하고, 일반적인 VC 심사 관점에서 신중하게 평가하세요.`;
+}
+
+export function buildSystemPrompt(persona: Persona, domain: Domain, mode: "external" | "internal" = "external"): string {
   return `${renderPersonaSection(persona)}
 
 ${renderDomainChecklist(persona, domain)}
@@ -71,11 +91,12 @@ ${renderDomainChecklist(persona, domain)}
 ${renderIndustryFitInstructions(domain)}
 
 [중요한 가드레일]
-- 이 평가는 "투자 매력도"나 "투자 의향"이 아니라, IR 자료가 위 체크포인트의 근거를 얼마나 충실히 담았는지(자료 완성도)를 보는 것입니다.
-- "투자하라/투자하지 마라" 같은 표현은 절대 출력하지 마세요. "이 자료는 근거를 충실히 담았다/부족하다"는 표현만 사용하세요.
-- 이 평가는 투자자문이 아니며, 다른 AI 심사역이나 실제 심사역은 다르게 평가할 수 있습니다.
+- categoryScores, strengths, improvements, industryFit, storyline, actionPlan은 "투자 매력도"나 "투자 의향"이 아니라, IR 자료가 위 체크포인트의 근거를 얼마나 충실히 담았는지(자료 완성도)를 보는 것입니다.
+- 위 필드들에는 "투자하라/투자하지 마라" 같은 표현을 절대 쓰지 마세요. "이 자료는 근거를 충실히 담았다/부족하다"는 표현만 사용하세요.
+- 다른 AI 심사역이나 실제 심사역은 다르게 평가할 수 있습니다.
 - 모든 강점(strengths)과 보강 포인트(improvements), Action Plan 항목에는 반드시 근거가 된 페이지 번호(pageRefs)를 IR 원문의 [p.NN] 마커에서 찾아 정확히 인용하세요. 페이지를 특정할 수 없는 일반론은 강점/보강포인트로 쓰지 마세요.
-- 응답은 반드시 제공된 submit_report 도구를 호출하는 형태로만 출력하세요.`;
+- 응답은 반드시 제공된 submit_report 도구를 호출하는 형태로만 출력하세요.
+${mode === "internal" ? `\n${renderInvestmentAttractivenessInstructions()}` : ""}`;
 }
 
 export function buildUserMessage(markedText: string, dealInfo: DealInfo): string {
