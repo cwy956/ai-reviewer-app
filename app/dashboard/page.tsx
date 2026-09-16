@@ -254,13 +254,13 @@ export default function DashboardPage() {
                     <li key={i} className="border-b border-panel-border/60 last:border-0">
                       <button
                         onClick={() => openMail(item.msgNum)}
-                        className="flex w-full items-center justify-between gap-3 rounded-md py-2 text-left hover:bg-accent-tint/40"
+                        className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-accent-tint/40"
                       >
                         <span className="flex min-w-0 items-center gap-2">
                           {item.type === "classified" && <Tag>분류</Tag>}
                           {item.type === "sent" && <Tag tone="good">발송</Tag>}
                           {item.type === "failed" && <Tag tone="bad">실패</Tag>}
-                          <span className="truncate">
+                          <span className="truncate transition-colors group-hover:text-accent-soft group-hover:underline">
                             {item.subject}
                             {item.type !== "classified" && <span className="text-muted"> → {item.recipientEmail}</span>}
                           </span>
