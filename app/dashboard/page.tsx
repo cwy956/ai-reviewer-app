@@ -247,17 +247,17 @@ export default function DashboardPage() {
             <ul className="space-y-2 text-sm">
               <li>
                 <a href="/mailbox" className="text-foreground hover:text-accent-soft">
-                  ← 메일함 자동 분류로
+                  메일함 자동 분류로
                 </a>
               </li>
               <li>
                 <a href="/internal-evaluate" className="text-foreground hover:text-accent-soft">
-                  AI 심사역으로 IR 평가하기 →
+                  AI 심사역으로 IR 평가하기
                 </a>
               </li>
               <li>
                 <a href="/mailbox/sent" className="text-foreground hover:text-accent-soft">
-                  이메일 발송 이력 →
+                  이메일 발송 이력
                 </a>
               </li>
             </ul>

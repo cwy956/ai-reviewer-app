@@ -60,7 +60,7 @@ function InternalLoginForm() {
         </button>
       </form>
       <a href="/" className="mt-6 text-center text-xs text-muted underline hover:text-accent-soft">
-        ← IR 평가 페이지로 돌아가기
+        IR 평가 페이지로 돌아가기
       </a>
     </main>
   );

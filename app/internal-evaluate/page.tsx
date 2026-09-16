@@ -82,10 +82,10 @@ export default function InternalEvaluatePage() {
         </p>
         <div className="mt-4 flex items-center justify-center gap-4 text-xs">
           <a href="/dashboard" className="text-muted underline hover:text-accent-soft">
-            현황 대시보드 →
+            현황 대시보드
           </a>
           <a href="/mailbox" className="text-muted underline hover:text-accent-soft">
-            메일함 자동 분류 →
+            메일함 자동 분류
           </a>
         </div>
       </header>

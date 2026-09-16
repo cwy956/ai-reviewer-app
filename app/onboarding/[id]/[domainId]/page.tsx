@@ -25,7 +25,7 @@ export default async function DomainCheckpointPage({
         </h1>
         <p className="mt-1 text-sm text-muted">이 영역에서 특히 중요하게 보는 체크포인트를 골라주세요.</p>
         <a href={`/onboarding/${id}`} className="mt-3 inline-block text-xs text-muted underline hover:text-accent-soft">
-          ← {persona.name} 대시보드로
+          {persona.name} 대시보드로
         </a>
       </header>
       <CheckpointForm personaId={id} domain={domain} initial={initial} />

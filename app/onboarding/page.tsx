@@ -16,7 +16,7 @@ export default async function OnboardingListPage() {
           당신만의 판단 기준을 입력하면, IR 평가 AI가 당신의 관점으로 스타트업을 심사합니다.
         </p>
         <a href="/" className="mt-3 inline-block text-xs text-muted underline hover:text-accent-soft">
-          ← IR 평가 앱으로
+          IR 평가 앱으로
         </a>
       </header>
 

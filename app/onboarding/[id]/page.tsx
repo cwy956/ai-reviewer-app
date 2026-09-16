@@ -26,7 +26,7 @@ export default async function PersonaDashboardPage({ params }: { params: Promise
           </Link>
         </div>
         <a href="/onboarding" className="mt-3 inline-block text-xs text-muted underline hover:text-accent-soft">
-          ← 심사역 목록으로
+          심사역 목록으로
         </a>
       </header>
 

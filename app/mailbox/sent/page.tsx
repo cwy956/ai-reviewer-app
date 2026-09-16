@@ -54,7 +54,7 @@ export default function SentLogPage() {
           수 있습니다.
         </p>
         <a href="/mailbox" className="mt-3 inline-block text-xs text-muted underline hover:text-accent-soft">
-          ← 메일함 자동 분류로
+          메일함 자동 분류로
         </a>
       </header>
 

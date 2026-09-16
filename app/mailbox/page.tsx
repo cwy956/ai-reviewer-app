@@ -197,16 +197,16 @@ export default function MailboxPage() {
           공용 메일함(POP3)에서 최근 메일을 가져와 IR·투자관련 / 정부지원사업 / 협업제안 / 스팸 / 기타로 자동 분류합니다.
         </p>
         <a href="/internal-evaluate" className="mt-3 inline-block text-xs text-muted underline hover:text-accent-soft">
-          AI 심사역으로 IR 평가하기 →
+          AI 심사역으로 IR 평가하기
         </a>
         <a
           href="/mailbox/sent"
           className="mt-3 ml-4 inline-block text-xs text-muted underline hover:text-accent-soft"
         >
-          이메일 발송 이력 보기 →
+          이메일 발송 이력 보기
         </a>
         <a href="/dashboard" className="mt-3 ml-4 inline-block text-xs text-muted underline hover:text-accent-soft">
-          현황 대시보드 보기 →
+          현황 대시보드 보기
         </a>
       </header>
 

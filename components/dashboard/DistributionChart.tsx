@@ -14,8 +14,11 @@ export function DistributionChart({ data }: { data: { label: string; count: numb
             contentStyle={{ background: "var(--panel)", border: "1px solid var(--panel-border)", borderRadius: 8 }}
             labelStyle={{ color: "var(--foreground)" }}
             itemStyle={{ color: "var(--accent-soft)" }}
+            wrapperStyle={{ transition: "none" }}
+            isAnimationActive={false}
+            cursor={{ fill: "var(--accent)", fillOpacity: 0.08 }}
           />
-          <Bar dataKey="count" fill="var(--accent)" radius={[0, 4, 4, 0]} />
+          <Bar dataKey="count" fill="var(--accent)" radius={[0, 4, 4, 0]} isAnimationActive={false} />
         </BarChart>
       </ResponsiveContainer>
     </div>

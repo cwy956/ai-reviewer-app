@@ -86,7 +86,7 @@ export default function Home() {
         </p>
         <div className="mt-4 flex items-center justify-center gap-4 text-xs">
           <a href="/internal-login" className="text-muted underline hover:text-accent-soft">
-            안다아시아벤처스 직원이신가요? 로그인 →
+            안다아시아벤처스 직원이신가요? 로그인
           </a>
         </div>
       </header>

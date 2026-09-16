@@ -101,7 +101,7 @@ export function UploadPanel({
         disabled={!file}
         className="w-full rounded-lg bg-accent px-4 py-3 font-semibold text-white transition enabled:hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
       >
-        평가 시작 →
+        평가 시작
       </button>
 
       <p className="text-center text-xs text-muted">
