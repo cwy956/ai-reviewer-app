@@ -161,35 +161,62 @@ export interface FullMailContent {
   subject: string;
   date: string;
   text: string;
-  attachments: { filename: string; size: number }[];
+  attachments: { index: number; filename: string; size: number }[];
+}
+
+/** RETR + parse, shared by fetchFullMessage and fetchAttachmentContent so both see the same message. */
+async function retrieveAndParse(msgNum: number, label: string) {
+  return withTimeout(
+    withClient(async (pop3) => {
+      const raw = (await pop3.RETR(msgNum)) as string;
+      const parsed = await simpleParser(raw);
+      return { raw, parsed };
+    }),
+    CHUNK_WALLCLOCK_TIMEOUT_MS,
+    label
+  );
 }
 
 /**
  * Fetches and fully parses one message on demand (via POP3 RETR, unlike the TOP-based summary
  * fetch) — used when the dashboard's "전체 보기" is clicked. Only plain text is returned (not
- * HTML) to avoid rendering untrusted remote content; attachment bytes are not downloaded, only
- * their names/sizes.
+ * HTML) to avoid rendering untrusted remote content.
  */
 export async function fetchFullMessage(msgNum: number): Promise<FullMailContent> {
-  return withTimeout(
-    withClient(async (pop3) => {
-      const raw = (await pop3.RETR(msgNum)) as string;
-      const parsed = await simpleParser(raw);
+  const { raw, parsed } = await retrieveAndParse(msgNum, `메일 #${msgNum} 전체 조회`);
 
-      const from = parsed.from?.text ?? naiveHeaderLookup(raw, "From") ?? "(알 수 없음)";
-      const subject = parsed.subject ?? naiveHeaderLookup(raw, "Subject") ?? "(제목 없음)";
-      const date = parsed.date ? parsed.date.toISOString() : (naiveHeaderLookup(raw, "Date") ?? "");
-      const text = (parsed.text ?? "").trim();
-      const attachments = (parsed.attachments ?? []).map((a) => ({
-        filename: a.filename ?? "(이름 없음)",
-        size: a.size,
-      }));
+  const from = parsed.from?.text ?? naiveHeaderLookup(raw, "From") ?? "(알 수 없음)";
+  const subject = parsed.subject ?? naiveHeaderLookup(raw, "Subject") ?? "(제목 없음)";
+  const date = parsed.date ? parsed.date.toISOString() : (naiveHeaderLookup(raw, "Date") ?? "");
+  const text = (parsed.text ?? "").trim();
+  const attachments = (parsed.attachments ?? []).map((a, index) => ({
+    index,
+    filename: a.filename ?? `첨부파일-${index + 1}`,
+    size: a.size,
+  }));
 
-      return { msgNum, from, subject, date, text, attachments };
-    }),
-    CHUNK_WALLCLOCK_TIMEOUT_MS,
-    `메일 #${msgNum} 전체 조회`
-  );
+  return { msgNum, from, subject, date, text, attachments };
+}
+
+/**
+ * Downloads one attachment's bytes by re-fetching and re-parsing the message (POP3/mailparser
+ * has no per-attachment fetch, and there's nowhere serverless to cache the parsed message
+ * between the list call and a later download click).
+ */
+export async function fetchAttachmentContent(
+  msgNum: number,
+  index: number
+): Promise<{ filename: string; contentType: string; content: Buffer }> {
+  const { parsed } = await retrieveAndParse(msgNum, `메일 #${msgNum} 첨부파일 조회`);
+  const attachment = (parsed.attachments ?? [])[index];
+  if (!attachment) {
+    throw new Error("첨부파일을 찾을 수 없습니다 (메일함 상태가 바뀌었을 수 있어요).");
+  }
+  return {
+    filename: attachment.filename ?? `첨부파일-${index + 1}`,
+    contentType: attachment.contentType || "application/octet-stream",
+    content: attachment.content,
+  };
 }
 
 export async function countMessages(): Promise<number> {

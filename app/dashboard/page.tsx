@@ -3,6 +3,15 @@
 import { useEffect, useState } from "react";
 import { DistributionChart } from "@/components/dashboard/DistributionChart";
 
+interface FullMail {
+  msgNum: number;
+  from: string;
+  subject: string;
+  date: string;
+  text: string;
+  attachments: { index: number; filename: string; size: number }[];
+}
+
 interface DashboardData {
   summary: {
     totalInMailbox: number | null;
@@ -80,6 +89,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [selectedMsgNum, setSelectedMsgNum] = useState<number | null>(null);
+  const [fullMailByMsgNum, setFullMailByMsgNum] = useState<Record<number, FullMail>>({});
+  const [fullMailLoading, setFullMailLoading] = useState<number | null>(null);
+  const [fullMailError, setFullMailError] = useState<string | null>(null);
+
   useEffect(() => {
     fetch("/api/dashboard")
       .then((res) => res.json())
@@ -90,6 +104,23 @@ export default function DashboardPage() {
       .catch((err) => setError(err instanceof Error ? err.message : "불러오기에 실패했습니다."))
       .finally(() => setLoading(false));
   }, []);
+
+  async function openMail(msgNum: number) {
+    setSelectedMsgNum(msgNum);
+    setFullMailError(null);
+    if (fullMailByMsgNum[msgNum]) return;
+    setFullMailLoading(msgNum);
+    try {
+      const res = await fetch(`/api/mail/message/${msgNum}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "메일 내용을 불러오지 못했습니다.");
+      setFullMailByMsgNum((prev) => ({ ...prev, [msgNum]: json as FullMail }));
+    } catch (err) {
+      setFullMailError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
+    } finally {
+      setFullMailLoading(null);
+    }
+  }
 
   const hasGaps =
     !!data &&
@@ -220,17 +251,22 @@ export default function DashboardPage() {
               <SectionCard title="최근 활동">
                 <ul className="max-h-96 space-y-1 overflow-y-auto text-sm">
                   {data.feed.map((item, i) => (
-                    <li key={i} className="flex items-center justify-between gap-3 border-b border-panel-border/60 py-2 last:border-0">
-                      <span className="flex min-w-0 items-center gap-2">
-                        {item.type === "classified" && <Tag>분류</Tag>}
-                        {item.type === "sent" && <Tag tone="good">발송</Tag>}
-                        {item.type === "failed" && <Tag tone="bad">실패</Tag>}
-                        <span className="truncate">
-                          {item.subject}
-                          {item.type !== "classified" && <span className="text-muted"> → {item.recipientEmail}</span>}
+                    <li key={i} className="border-b border-panel-border/60 last:border-0">
+                      <button
+                        onClick={() => openMail(item.msgNum)}
+                        className="flex w-full items-center justify-between gap-3 rounded-md py-2 text-left hover:bg-accent-tint/40"
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          {item.type === "classified" && <Tag>분류</Tag>}
+                          {item.type === "sent" && <Tag tone="good">발송</Tag>}
+                          {item.type === "failed" && <Tag tone="bad">실패</Tag>}
+                          <span className="truncate">
+                            {item.subject}
+                            {item.type !== "classified" && <span className="text-muted"> → {item.recipientEmail}</span>}
+                          </span>
                         </span>
-                      </span>
-                      <span className="shrink-0 text-xs text-muted">{formatDateTime(item.at)}</span>
+                        <span className="shrink-0 text-xs text-muted">{formatDateTime(item.at)}</span>
+                      </button>
                     </li>
                   ))}
                   {data.feed.length === 0 && <li className="py-2 text-muted">아직 활동 기록이 없어요.</li>}
@@ -264,6 +300,63 @@ export default function DashboardPage() {
           </div>
         </aside>
       </div>
+
+      {selectedMsgNum !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setSelectedMsgNum(null)}
+        >
+          <div
+            className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-xl border border-panel-border bg-panel p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {fullMailLoading === selectedMsgNum && <p className="text-sm text-muted">불러오는 중...</p>}
+            {fullMailError && fullMailLoading !== selectedMsgNum && !fullMailByMsgNum[selectedMsgNum] && (
+              <p className="text-sm text-bad">{fullMailError}</p>
+            )}
+            {fullMailByMsgNum[selectedMsgNum] && (
+              <>
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground">{fullMailByMsgNum[selectedMsgNum].subject}</h3>
+                    <p className="mt-1 text-xs text-muted">{fullMailByMsgNum[selectedMsgNum].from}</p>
+                    <p className="text-xs text-muted">{formatDateTime(fullMailByMsgNum[selectedMsgNum].date)}</p>
+                  </div>
+                  <button onClick={() => setSelectedMsgNum(null)} className="shrink-0 text-sm text-muted hover:text-foreground">
+                    닫기
+                  </button>
+                </div>
+
+                {fullMailByMsgNum[selectedMsgNum].attachments.length > 0 && (
+                  <div className="mb-4 space-y-2">
+                    <p className="text-xs font-medium text-muted">첨부 자료</p>
+                    <ul className="space-y-1.5">
+                      {fullMailByMsgNum[selectedMsgNum].attachments.map((a) => (
+                        <li key={a.index} className="flex items-center justify-between gap-3 rounded-lg border border-panel-border px-3 py-2 text-sm">
+                          <span className="truncate">
+                            📎 {a.filename} <span className="text-xs text-muted">({(a.size / 1024).toFixed(0)}KB)</span>
+                          </span>
+                          <a
+                            href={`/api/mail/message/${selectedMsgNum}/attachment/${a.index}`}
+                            download={a.filename}
+                            className="shrink-0 text-xs font-medium text-accent-soft hover:underline"
+                          >
+                            다운로드
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <p className="whitespace-pre-wrap text-sm text-foreground/90">
+                  {fullMailByMsgNum[selectedMsgNum].text || "(본문 텍스트가 없습니다 — 첨부파일 또는 서식만 있는 메일일 수 있어요)"}
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
