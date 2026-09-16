@@ -257,7 +257,8 @@ export default function DashboardPage() {
                         className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-accent-tint/40"
                       >
                         <span className="flex min-w-0 items-center gap-2">
-                          {item.type === "classified" && <Tag>분류</Tag>}
+                          {item.type === "classified" &&
+                            (item.category === "ir" ? <Tag>투자</Tag> : <Tag tone="warn">관리</Tag>)}
                           {item.type === "sent" && <Tag tone="good">발송</Tag>}
                           {item.type === "failed" && <Tag tone="bad">실패</Tag>}
                           <span className="truncate transition-colors group-hover:text-accent-soft group-hover:underline">
