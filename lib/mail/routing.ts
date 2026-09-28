@@ -1,10 +1,11 @@
 import { listPersonas } from "../personas/store";
+import { listAdminTeamMembers } from "../adminTeam/store";
 import type { ClassifiedMail, MailCategory } from "./classify";
 
 export interface RecipientGroup {
   email: string;
-  /** undefined for the admin-team recipient (not tied to a specific reviewer persona). */
-  personaName?: string;
+  recipientName: string;
+  team: "investment" | "admin";
   mails: ClassifiedMail[];
 }
 
@@ -15,20 +16,20 @@ const ADMIN_CATEGORIES: MailCategory[] = ["gov_program", "biz_proposal", "etc"];
  * - ir mails: every reviewer persona whose domainCriteria covers the mail's domainId AND has an
  *   email on file (set via onboarding) — a mail can go to more than one reviewer if several
  *   cover that domain, and is silently dropped if nobody does yet.
- * - gov_program / biz_proposal / etc: the single ADMIN_TEAM_EMAIL, if configured.
+ * - gov_program / biz_proposal / etc: every registered admin team member (onboarding page).
  * - spam: never routed anywhere.
  * Callers should already have filtered out internal-domain senders before calling this.
  */
 export async function groupMailsByRecipient(mails: ClassifiedMail[]): Promise<RecipientGroup[]> {
-  const personas = await listPersonas();
+  const [personas, adminMembers] = await Promise.all([listPersonas(), listAdminTeamMembers()]);
   const groups = new Map<string, RecipientGroup>();
 
-  function addTo(email: string, personaName: string | undefined, mail: ClassifiedMail) {
+  function addTo(email: string, recipientName: string, team: "investment" | "admin", mail: ClassifiedMail) {
     const existing = groups.get(email);
     if (existing) {
       existing.mails.push(mail);
     } else {
-      groups.set(email, { email, personaName, mails: [mail] });
+      groups.set(email, { email, recipientName, team, mails: [mail] });
     }
   }
 
@@ -38,10 +39,9 @@ export async function groupMailsByRecipient(mails: ClassifiedMail[]): Promise<Re
       const covering = personas.filter(
         (p) => p.email && p.domainCriteria.some((c) => c.domainId === mail.domainId)
       );
-      for (const p of covering) addTo(p.email!, p.name, mail);
+      for (const p of covering) addTo(p.email!, p.name, "investment", mail);
     } else if (ADMIN_CATEGORIES.includes(mail.category)) {
-      const adminEmail = process.env.ADMIN_TEAM_EMAIL;
-      if (adminEmail) addTo(adminEmail, undefined, mail);
+      for (const member of adminMembers) addTo(member.email, member.name, "admin", mail);
     }
   }
 

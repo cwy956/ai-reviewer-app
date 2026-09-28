@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listPersonas } from "@/lib/personas/store";
 import { domainCategories } from "@/lib/domains";
+import { AdminTeamSection } from "@/components/onboarding/AdminTeamSection";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,8 @@ export default async function OnboardingListPage() {
           );
         })}
       </section>
+
+      <AdminTeamSection />
     </main>
   );
 }

@@ -71,5 +71,13 @@ create table if not exists mail_backlog_meta (
   constraint mail_backlog_meta_singleton check (id = 1)
 );
 
+-- 관리팀 구성원 (정부지원사업·협업제안·기타 메일을 받는 사람들 — 온보딩 페이지에서 등록·삭제)
+create table if not exists admin_team_members (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text not null,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists classified_mails_category_idx on classified_mails (category);
 create index if not exists mail_send_log_msg_num_idx on mail_send_log (msg_num);

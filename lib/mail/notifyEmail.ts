@@ -30,7 +30,8 @@ export async function sendEmailAlerts(rawMails: ClassifiedMail[], dashboardUrl?:
   const logEntries: SendLogEntry[] = [];
 
   for (const group of groups) {
-    const subjectLabel = group.personaName ? `${group.personaName} 심사역님 담당 영역` : "관리팀";
+    const subjectLabel =
+      group.team === "investment" ? `${group.recipientName} 심사역님 담당 영역` : `관리팀 - ${group.recipientName}`;
     const result = await sendEmail({
       to: group.email,
       subject: `[AI 심사역] 새 메일 ${group.mails.length}통 도착 — ${subjectLabel}`,
@@ -46,7 +47,7 @@ export async function sendEmailAlerts(rawMails: ClassifiedMail[], dashboardUrl?:
         category: mail.category,
         domainId: mail.domainId,
         recipientEmail: group.email,
-        recipientName: group.personaName,
+        recipientName: group.recipientName,
         sentAt: new Date().toISOString(),
         status: result.ok ? "sent" : "failed",
         error: result.error,
