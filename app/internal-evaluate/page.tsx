@@ -87,6 +87,9 @@ export default function InternalEvaluatePage() {
           <a href="/mailbox" className="text-muted underline hover:text-accent-soft">
             메일함 자동 분류
           </a>
+          <a href="/onboarding" className="text-muted underline hover:text-accent-soft">
+            심사역·관리팀 등록
+          </a>
         </div>
       </header>
 
