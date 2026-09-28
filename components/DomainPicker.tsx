@@ -43,7 +43,7 @@ export function DomainPicker({
               className={`rounded-md px-3 py-2 text-left text-sm transition ${
                 current?.categoryId === c.categoryId
                   ? "bg-accent text-white"
-                  : "text-muted hover:bg-white/5 hover:text-foreground"
+                  : "text-muted hover:bg-black/5 hover:text-foreground"
               }`}
             >
               {c.categoryLabel}

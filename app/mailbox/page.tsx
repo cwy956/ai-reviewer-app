@@ -16,16 +16,16 @@ const PRIORITY_RANK: Record<string, number> = { 높음: 0, 중간: 1, 낮음: 2 
 
 const CATEGORY_BADGE: Record<MailCategory, string> = {
   ir: "bg-accent/20 text-accent-soft",
-  gov_program: "bg-white/10 text-muted",
-  biz_proposal: "bg-white/10 text-muted",
+  gov_program: "bg-black/5 text-muted",
+  biz_proposal: "bg-black/5 text-muted",
   spam: "bg-bad/10 text-bad",
-  etc: "bg-white/10 text-muted",
+  etc: "bg-black/5 text-muted",
 };
 
 const PRIORITY_BADGE: Record<string, string> = {
   높음: "bg-bad/20 text-bad",
   중간: "bg-warn/20 text-warn",
-  낮음: "bg-white/10 text-muted",
+  낮음: "bg-black/5 text-muted",
 };
 
 function formatDate(iso: string): string {
@@ -310,7 +310,7 @@ export default function MailboxPage() {
             <button
               onClick={() => setActiveCategory("all")}
               className={`rounded-full px-3 py-1 text-xs transition ${
-                activeCategory === "all" ? "bg-accent text-white" : "bg-white/5 text-muted hover:bg-white/10"
+                activeCategory === "all" ? "bg-accent text-white" : "bg-black/5 text-muted hover:bg-black/10"
               }`}
             >
               전체 ({counts.all})
@@ -320,7 +320,7 @@ export default function MailboxPage() {
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={`rounded-full px-3 py-1 text-xs transition ${
-                  activeCategory === cat ? "bg-accent text-white" : "bg-white/5 text-muted hover:bg-white/10"
+                  activeCategory === cat ? "bg-accent text-white" : "bg-black/5 text-muted hover:bg-black/10"
                 }`}
               >
                 {CATEGORY_LABELS[cat]} ({counts[cat] ?? 0})

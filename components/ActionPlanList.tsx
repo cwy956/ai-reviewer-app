@@ -3,7 +3,7 @@ import type { ActionItem } from "@/lib/reportSchema";
 const PRIORITY_STYLES: Record<ActionItem["priority"], string> = {
   높음: "bg-bad/20 text-bad",
   중간: "bg-warn/20 text-warn",
-  낮음: "bg-white/10 text-muted",
+  낮음: "bg-black/5 text-muted",
 };
 
 export function ActionPlanList({ actionPlan }: { actionPlan: ActionItem[] }) {

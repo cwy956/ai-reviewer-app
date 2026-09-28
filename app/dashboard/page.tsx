@@ -127,7 +127,7 @@ export default function DashboardPage() {
     (data.gaps.uncoveredDomains.length > 0 || data.gaps.personasWithoutEmail.length > 0 || data.gaps.recentFailed.length > 0);
 
   return (
-    <main className="theme-anda-report min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12 lg:flex-row lg:items-start">
         {/* 메인 컨텐츠 */}
         <div className="min-w-0 flex-1 space-y-5">

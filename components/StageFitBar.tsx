@@ -17,7 +17,7 @@ export function StageFitBar({ stageAssessment }: { stageAssessment: EvaluationRe
       <div className="grid grid-cols-4 gap-1">
         {STAGES.map((stage, i) => (
           <div key={stage} className="space-y-1">
-            <div className={`h-1.5 rounded-full ${i <= currentIdx ? "bg-accent" : "bg-white/10"}`} />
+            <div className={`h-1.5 rounded-full ${i <= currentIdx ? "bg-accent" : "bg-panel-border"}`} />
             <p className={`text-center text-xs ${i === currentIdx ? "font-semibold text-foreground" : "text-muted"}`}>
               {stage}
             </p>
@@ -27,7 +27,7 @@ export function StageFitBar({ stageAssessment }: { stageAssessment: EvaluationRe
 
       <p className="mt-4 text-sm text-muted">{stageAssessment.rationale}</p>
 
-      <div className="mt-3 rounded-md bg-white/5 p-3 text-sm">
+      <div className="mt-3 rounded-md bg-black/5 p-3 text-sm">
         <p className="mb-1 font-medium text-accent-soft">다음 단계로 가려면</p>
         <p className="text-muted">{stageAssessment.nextStepAdvice}</p>
       </div>

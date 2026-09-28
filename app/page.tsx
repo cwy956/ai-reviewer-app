@@ -97,7 +97,7 @@ export default function Home() {
             <div key={label} className="flex items-center gap-2">
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-full ${
-                  step >= i + 1 ? "bg-accent text-white" : "bg-white/10 text-muted"
+                  step >= i + 1 ? "bg-accent text-white" : "bg-black/5 text-muted"
                 }`}
               >
                 {i + 1}

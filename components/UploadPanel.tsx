@@ -41,7 +41,7 @@ export function UploadPanel({
             <span
               key={stage}
               className={`rounded-full px-3 py-1 ${
-                i <= stageIdx ? "bg-accent/20 text-accent-soft" : "bg-white/5 text-muted"
+                i <= stageIdx ? "bg-accent/20 text-accent-soft" : "bg-black/5 text-muted"
               }`}
             >
               {stage}

@@ -27,7 +27,7 @@ export function InvestmentAttractivenessPanel({
               <span className="font-medium">{c.criterionLabel}</span>
               <span className="text-muted">{c.score}</span>
             </div>
-            <div className="mt-1 h-1.5 w-full rounded-full bg-white/10">
+            <div className="mt-1 h-1.5 w-full rounded-full bg-panel-border">
               <div
                 className="h-1.5 rounded-full bg-accent"
                 style={{ width: `${c.score}%` }}

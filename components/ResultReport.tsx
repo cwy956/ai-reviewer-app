@@ -39,7 +39,7 @@ function CategoryDetail({ categoryScores }: { categoryScores: EvaluationReport["
                   <span className="font-semibold text-foreground">{c.score}</span>
                 </span>
               </button>
-              <div className="mt-1 h-1.5 w-full rounded-full bg-white/10">
+              <div className="mt-1 h-1.5 w-full rounded-full bg-panel-border">
                 <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${c.score}%` }} />
               </div>
               {isOpen && <p className="mt-2 text-sm text-muted">{c.summary}</p>}
