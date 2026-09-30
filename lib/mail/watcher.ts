@@ -4,7 +4,9 @@ import { sendEmailAlerts } from "./notifyEmail";
 import { readWatchState, writeWatchState } from "./watchStore";
 import { autoEvaluateIrMails } from "./autoEvaluate";
 
-const THRESHOLD = Number(process.env.MAIL_WATCH_THRESHOLD || 5);
+// 메일 유입량이 적은(며칠에 1통꼴) 지금 상황에서 5통 기준은 몇 주씩 알림이 안 갈 수 있어서
+// 1통으로 낮춤 — 유입량이 적으니 스팸 걱정도 없음. 유입량이 늘면 다시 올릴 수 있음.
+const THRESHOLD = Number(process.env.MAIL_WATCH_THRESHOLD || 1);
 
 /** Fans a classified batch out to reviewers/admin by email and logs the outcome. */
 async function dispatchAlerts(classified: ClassifiedMail[], label: string) {
