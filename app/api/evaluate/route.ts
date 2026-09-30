@@ -9,7 +9,7 @@ import type { DealInfo } from "@/lib/buildPrompt";
 export const runtime = "nodejs";
 // internal 모드는 evaluateIr이 순차로 2번(기본 리포트 + 투자매력도) 호출하므로 120s로는
 // 빠듯할 수 있어 여유를 둠 (external 모드는 1번만 호출해서 훨씬 빨리 끝남).
-export const maxDuration = 240;
+export const maxDuration = 280;
 
 async function isInternalRequest(): Promise<boolean> {
   const password = process.env.INTERNAL_ACCESS_PASSWORD;

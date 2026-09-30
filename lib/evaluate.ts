@@ -281,10 +281,21 @@ export async function evaluateIr(
     }
   };
 
+  const t0 = Date.now();
   const report = fillCategoryLabels(await runToolCall<EvaluationReport>(buildReportTool()));
+  console.log(`[evaluateIr] 기본 리포트 완료 (${Date.now() - t0}ms)`);
 
   if (mode === "internal") {
-    report.investmentAttractiveness = await runToolCall<InvestmentAttractivenessAssessment>(INVESTMENT_TOOL);
+    // Don't let a slow/failing second call (even after its own retry) throw away the base report
+    // that already succeeded and cost real API time/money — degrade to "no investment axis" and
+    // let the UI (which already renders this field conditionally) show the rest.
+    const t1 = Date.now();
+    try {
+      report.investmentAttractiveness = await runToolCall<InvestmentAttractivenessAssessment>(INVESTMENT_TOOL);
+      console.log(`[evaluateIr] 투자 매력도 완료 (${Date.now() - t1}ms)`);
+    } catch (err) {
+      console.error(`[evaluateIr] 투자 매력도 평가 실패, 기본 리포트만 반환 (${Date.now() - t1}ms):`, err);
+    }
   }
 
   return report;
