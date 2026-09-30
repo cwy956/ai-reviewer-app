@@ -79,5 +79,21 @@ create table if not exists admin_team_members (
   created_at timestamptz not null default now()
 );
 
+-- IR 메일에 대한 AI 심사역 평가 결과 (/ir-deals에서 첨부파일을 골라 평가를 돌리면 여기 쌓임).
+-- 같은 메일을 다시 평가하면 새 행이 추가됨(이력 보존) — 목록 화면은 msg_num별 최신 1건만 보여줌.
+create table if not exists mail_evaluations (
+  id bigserial primary key,
+  msg_num integer not null,
+  attachment_index integer not null,
+  attachment_filename text not null,
+  domain_id text not null,
+  persona_id text not null,
+  persona_name text not null,
+  report jsonb not null,
+  evaluated_at timestamptz not null default now()
+);
+
+create index if not exists mail_evaluations_msg_num_idx on mail_evaluations (msg_num);
+
 create index if not exists classified_mails_category_idx on classified_mails (category);
 create index if not exists mail_send_log_msg_num_idx on mail_send_log (msg_num);

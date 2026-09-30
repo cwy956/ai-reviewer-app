@@ -81,6 +81,9 @@ export default function InternalEvaluatePage() {
           내부 심사역 전용이며, 이 결과는 외부에 공유되지 않습니다.
         </p>
         <div className="mt-4 flex items-center justify-center gap-4 text-xs">
+          <a href="/ir-deals" className="text-muted underline hover:text-accent-soft">
+            IR 딜 목록
+          </a>
           <a href="/dashboard" className="text-muted underline hover:text-accent-soft">
             현황 대시보드
           </a>

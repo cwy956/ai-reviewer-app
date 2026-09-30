@@ -283,6 +283,11 @@ export default function DashboardPage() {
             <p className="mb-3 text-xs font-semibold text-muted">바로가기</p>
             <ul className="space-y-2 text-sm">
               <li>
+                <a href="/ir-deals" className="text-foreground hover:text-accent-soft">
+                  IR 딜 목록
+                </a>
+              </li>
+              <li>
                 <a href="/mailbox" className="text-foreground hover:text-accent-soft">
                   메일함 자동 분류로
                 </a>
