@@ -2,6 +2,7 @@ import { countMessages, fetchRecentMailSummaries } from "./client";
 import { classifyMails, type ClassifiedMail } from "./classify";
 import { sendEmailAlerts } from "./notifyEmail";
 import { readWatchState, writeWatchState } from "./watchStore";
+import { autoEvaluateIrMails } from "./autoEvaluate";
 
 const THRESHOLD = Number(process.env.MAIL_WATCH_THRESHOLD || 5);
 
@@ -62,6 +63,15 @@ export async function checkForNewMail(): Promise<WatchCheckResult> {
     const classified = await classifyMails(newMails);
     await dispatchAlerts(classified, "");
     await writeWatchState({ lastAlertedCount: total, lastCheckedAt: new Date().toISOString(), lastAlertedAt: new Date().toISOString() });
+
+    // Runs only after the alert + watch-state write above are safely committed, so a slow/failed
+    // auto-evaluation (or the function getting killed by its own time limit mid-way through) can
+    // never cause mail to be re-classified/re-alerted on the next check — worst case, an
+    // unevaluated IR mail just sits in /ir-deals waiting for a manual "평가하기" click.
+    await autoEvaluateIrMails(classified).catch((err) => {
+      console.error("[mail-watch] IR 자동 평가 중 오류(알림 자체는 이미 정상 발송됨):", err);
+    });
+
     return { totalInMailbox: total, newSinceLastAlert, alerted: true };
   }
 

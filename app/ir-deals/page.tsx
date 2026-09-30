@@ -6,27 +6,24 @@ import type { Persona } from "@/lib/personas/schema";
 import type { EvaluationReport } from "@/lib/reportSchema";
 import { ResultReport } from "@/components/ResultReport";
 
-interface DealEvaluation {
-  msgNum: number;
-  domainId: string;
-  personaId: string;
-  personaName: string;
-  attachmentFilename: string;
+interface DealEvaluationSummary {
   totalScore: number;
   investmentAttractivenessScore: number | null;
   evaluatedAt: string;
+  personaName: string;
 }
 
 interface Deal {
-  msgNum: number;
-  subject: string;
-  from: string;
+  source: "mail" | "platform";
+  key: string;
+  msgNum: number | null;
+  evaluationId: number | null;
+  title: string;
+  subtitle: string;
   date: string | null;
-  hasAttachment: boolean;
   domainId: string | null;
   domainLabel: string;
-  priority: string;
-  evaluation: DealEvaluation | null;
+  evaluation: DealEvaluationSummary | null;
 }
 
 interface FullMailAttachment {
@@ -58,6 +55,14 @@ function ScoreBadge({ score }: { score: number }) {
   return <span className={`font-semibold ${tone}`}>{score}</span>;
 }
 
+function SourceTag({ source }: { source: "mail" | "platform" }) {
+  return source === "mail" ? (
+    <span className="rounded-full bg-accent-tint px-2 py-0.5 text-[11px] font-medium text-accent-soft">메일함</span>
+  ) : (
+    <span className="rounded-full bg-warn/10 px-2 py-0.5 text-[11px] font-medium text-warn">플랫폼 제출</span>
+  );
+}
+
 export default function IrDealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [personas, setPersonas] = useState<Persona[]>([]);
@@ -66,8 +71,9 @@ export default function IrDealsPage() {
 
   const [selected, setSelected] = useState<Deal | null>(null);
   const [fullMail, setFullMail] = useState<FullMail | null>(null);
-  const [mailLoading, setMailLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [latestReport, setLatestReport] = useState<EvaluationReport | null>(null);
+  const [reportPersonaName, setReportPersonaName] = useState("");
   const [showEvalForm, setShowEvalForm] = useState(false);
 
   const [formDomainId, setFormDomainId] = useState("");
@@ -78,7 +84,7 @@ export default function IrDealsPage() {
 
   function loadDeals() {
     setLoading(true);
-    fetch("/api/mail/ir-list")
+    fetch("/api/ir-deals")
       .then((res) => res.json())
       .then((data) => {
         if (data.error) throw new Error(data.error);
@@ -100,41 +106,51 @@ export default function IrDealsPage() {
     setSelected(deal);
     setFullMail(null);
     setLatestReport(null);
-    setShowEvalForm(!deal.evaluation);
+    setReportPersonaName("");
+    setShowEvalForm(deal.source === "mail" && !deal.evaluation);
     setEvalError(null);
     setFormDomainId(deal.domainId ?? "");
     setFormAttachmentIndex(0);
+    setDetailLoading(true);
 
-    setMailLoading(true);
     try {
+      if (deal.source === "platform") {
+        const res = await fetch(`/api/ir-deals/platform/${deal.evaluationId}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "제출 내역을 불러오지 못했습니다.");
+        setLatestReport(data.submission.report);
+        setReportPersonaName(data.submission.personaName);
+        setFormPersonaId(data.submission.personaId);
+        setFormDomainId(data.submission.domainId);
+        return;
+      }
+
+      // source === "mail"
       const res = await fetch(`/api/mail/message/${deal.msgNum}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "메일을 불러오지 못했습니다.");
       setFullMail(data as FullMail);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
-    } finally {
-      setMailLoading(false);
-    }
 
-    if (deal.evaluation) {
-      try {
-        const res = await fetch(`/api/mail/evaluate/${deal.msgNum}`);
-        const data = await res.json();
-        const latest = data.evaluations?.[0];
+      if (deal.evaluation) {
+        const evalRes = await fetch(`/api/mail/evaluate/${deal.msgNum}`);
+        const evalData = await evalRes.json();
+        const latest = evalData.evaluations?.[0];
         if (latest) {
           setLatestReport(latest.report);
+          setReportPersonaName(latest.personaName);
           setFormPersonaId(latest.personaId);
           setFormDomainId(latest.domainId);
         }
-      } catch {
-        // non-fatal — the badge on the list already summarizes the score
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
+    } finally {
+      setDetailLoading(false);
     }
   }
 
   async function runEvaluation() {
-    if (!selected || !formDomainId || !formPersonaId || !fullMail?.attachments.length) return;
+    if (!selected || selected.source !== "mail" || !formDomainId || !formPersonaId || !fullMail?.attachments.length) return;
     setEvaluating(true);
     setEvalError(null);
     try {
@@ -151,6 +167,7 @@ export default function IrDealsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "평가에 실패했습니다.");
       setLatestReport(data.evaluation.report);
+      setReportPersonaName(data.evaluation.personaName);
       setShowEvalForm(false);
       loadDeals();
     } catch (err) {
@@ -168,7 +185,8 @@ export default function IrDealsPage() {
         <header className="mb-8">
           <h1 className="text-2xl font-bold text-accent-soft">IR 딜 목록</h1>
           <p className="mt-2 text-sm text-muted">
-            지금까지 들어온 IR 메일을 한 곳에서 열람하고, AI 심사역 평가(투자 매력도 포함)를 바로 돌려볼 수 있어요.
+            공용 메일함으로 온 IR과 공개 평가 페이지에 스타트업이 직접 올린 IR을 한 곳에서 열람해요. 새 메일은
+            매일 자동으로 평가되고, 플랫폼 제출은 그 자리에서 바로 평가돼요.
           </p>
           <div className="mt-3 flex gap-4 text-xs">
             <a href="/dashboard" className="text-muted underline hover:text-accent-soft">
@@ -185,21 +203,24 @@ export default function IrDealsPage() {
 
         {!loading && deals.length === 0 && (
           <p className="rounded-lg border border-dashed border-panel-border p-6 text-center text-sm text-muted">
-            아직 분류된 IR 메일이 없어요.
+            아직 들어온 IR이 없어요.
           </p>
         )}
 
         <div className="space-y-2">
           {deals.map((deal) => (
             <button
-              key={deal.msgNum}
+              key={deal.key}
               onClick={() => openDeal(deal)}
               className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border border-panel-border bg-panel p-4 text-left transition hover:border-accent-soft/60"
             >
               <div className="min-w-0">
-                <p className="truncate font-medium">{deal.subject}</p>
+                <div className="mb-1 flex items-center gap-2">
+                  <SourceTag source={deal.source} />
+                </div>
+                <p className="truncate font-medium">{deal.title}</p>
                 <p className="mt-0.5 truncate text-xs text-muted">
-                  {deal.from} · {deal.domainLabel} · {formatDate(deal.date)}
+                  {deal.subtitle} · {deal.domainLabel} · {formatDate(deal.date)}
                 </p>
               </div>
               <div className="shrink-0 text-right text-xs">
@@ -232,27 +253,32 @@ export default function IrDealsPage() {
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h3 className="font-semibold text-foreground">{selected.subject}</h3>
-                <p className="mt-1 text-xs text-muted">{selected.from}</p>
+                <div className="mb-1">
+                  <SourceTag source={selected.source} />
+                </div>
+                <h3 className="font-semibold text-foreground">{selected.title}</h3>
+                <p className="mt-1 text-xs text-muted">{selected.subtitle}</p>
               </div>
               <button onClick={() => setSelected(null)} className="shrink-0 text-sm text-muted hover:text-foreground">
                 닫기
               </button>
             </div>
 
-            {mailLoading && <p className="text-sm text-muted">메일 불러오는 중...</p>}
+            {detailLoading && <p className="text-sm text-muted">불러오는 중...</p>}
 
-            {fullMail && !showEvalForm && latestReport && (
+            {!detailLoading && latestReport && (
               <>
-                <button
-                  onClick={() => setShowEvalForm(true)}
-                  className="mb-4 text-xs text-accent-soft underline hover:text-accent"
-                >
-                  다시 평가하기 (다른 심사역·영역으로)
-                </button>
+                {selected.source === "mail" && (
+                  <button
+                    onClick={() => setShowEvalForm(true)}
+                    className="mb-4 text-xs text-accent-soft underline hover:text-accent"
+                  >
+                    다시 평가하기 (다른 심사역·영역으로)
+                  </button>
+                )}
                 <ResultReport
                   report={latestReport}
-                  reviewerName={selectedPersona?.name ?? ""}
+                  reviewerName={selectedPersona?.name ?? reportPersonaName}
                   reviewerAffiliation={selectedPersona?.affiliation ?? ""}
                   onReset={() => setSelected(null)}
                   internalMode
@@ -260,7 +286,7 @@ export default function IrDealsPage() {
               </>
             )}
 
-            {fullMail && showEvalForm && (
+            {!detailLoading && selected.source === "mail" && showEvalForm && fullMail && (
               <div className="space-y-4">
                 {fullMail.attachments.length === 0 ? (
                   <p className="rounded-lg border border-warn/30 bg-warn/5 p-4 text-sm text-warn">

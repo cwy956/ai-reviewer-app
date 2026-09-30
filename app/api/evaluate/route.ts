@@ -4,6 +4,7 @@ import { parsePdf } from "@/lib/parsePdf";
 import { evaluateIr } from "@/lib/evaluate";
 import { getDomain } from "@/lib/domains";
 import { getPersona } from "@/lib/personas";
+import { saveEvaluation } from "@/lib/evaluations/store";
 import type { DealInfo } from "@/lib/buildPrompt";
 
 export const runtime = "nodejs";
@@ -58,6 +59,29 @@ export async function POST(request: Request) {
     const parsed = await parsePdf(buffer);
 
     const report = await evaluateIr(persona, domain, parsed.markedText, dealInfo, mode);
+
+    // Only real startup submissions through the public page go into the internal IR list —
+    // internal staff testing arbitrary files via /internal-evaluate (mode === "internal") aren't
+    // actual pipeline deals. Best-effort: never let a save failure break the response the
+    // startup is waiting on.
+    if (mode === "external") {
+      const companyName = (formData.get("companyName") as string) || undefined;
+      // Awaited (not fire-and-forget) — a serverless function can be frozen/torn down right
+      // after the response is sent, which would silently drop an un-awaited background save.
+      try {
+        await saveEvaluation({
+          source: "platform",
+          companyName,
+          attachmentFilename: file.name,
+          domainId,
+          personaId,
+          personaName: persona.name,
+          report,
+        });
+      } catch (err) {
+        console.error("플랫폼 제출 저장 실패 (평가 결과는 정상 반환됨):", err);
+      }
+    }
 
     return NextResponse.json({
       report,

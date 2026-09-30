@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listEvaluationsForMail } from "@/lib/mail/evaluationStore";
+import { listEvaluationsForMail } from "@/lib/evaluations/store";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ msgNum: string }> }) {
   const { msgNum } = await params;

@@ -79,12 +79,28 @@ create table if not exists admin_team_members (
   created_at timestamptz not null default now()
 );
 
--- IR 메일에 대한 AI 심사역 평가 결과 (/ir-deals에서 첨부파일을 골라 평가를 돌리면 여기 쌓임).
--- 같은 메일을 다시 평가하면 새 행이 추가됨(이력 보존) — 목록 화면은 msg_num별 최신 1건만 보여줌.
-create table if not exists mail_evaluations (
+-- IR에 대한 AI 심사역 평가 결과. 출처가 둘 있음:
+--   source='mail'     — 공용 메일함으로 들어온 IR (msg_num 있음, /ir-deals에서 평가하거나
+--                        메일 자동 감시가 새 IR을 감지하면 기본 AI 심사역으로 자동 평가함).
+--                        같은 메일을 다시 평가하면 새 행 추가(이력 보존) — 목록은 msg_num별
+--                        최신 1건만 보여줌.
+--   source='platform' — 공개 IR 평가 페이지(/)에 스타트업이 직접 업로드해서 즉시 평가된 것
+--                        (msg_num 없음, company_name 있음). 제출마다 항상 새 행.
+-- ⚠ 기존에 mail_evaluations로 만들어져 있던 프로젝트는 이 CREATE TABLE 대신 아래 마이그레이션을
+--   실행해야 함 (Supabase SQL Editor에서 한 번만):
+--
+--   alter table mail_evaluations rename to ir_evaluations;
+--   alter table ir_evaluations add column if not exists source text not null default 'mail';
+--   alter table ir_evaluations add constraint ir_evaluations_source_check check (source in ('mail','platform'));
+--   alter table ir_evaluations add column if not exists company_name text;
+--   alter table ir_evaluations alter column msg_num drop not null;
+--
+create table if not exists ir_evaluations (
   id bigserial primary key,
-  msg_num integer not null,
-  attachment_index integer not null,
+  source text not null check (source in ('mail', 'platform')),
+  msg_num integer,
+  company_name text,
+  attachment_index integer not null default 0,
   attachment_filename text not null,
   domain_id text not null,
   persona_id text not null,
@@ -93,7 +109,8 @@ create table if not exists mail_evaluations (
   evaluated_at timestamptz not null default now()
 );
 
-create index if not exists mail_evaluations_msg_num_idx on mail_evaluations (msg_num);
+create index if not exists ir_evaluations_msg_num_idx on ir_evaluations (msg_num);
+create index if not exists ir_evaluations_source_idx on ir_evaluations (source);
 
 create index if not exists classified_mails_category_idx on classified_mails (category);
 create index if not exists mail_send_log_msg_num_idx on mail_send_log (msg_num);

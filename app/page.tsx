@@ -44,6 +44,7 @@ export default function Home() {
       formData.append("file", file);
       formData.append("domainId", domainId);
       formData.append("personaId", personaId);
+      if (dealInfo.companyName) formData.append("companyName", dealInfo.companyName);
       if (dealInfo.stage) formData.append("stage", dealInfo.stage);
       if (dealInfo.preValuationEok) formData.append("preValuationEok", String(dealInfo.preValuationEok));
       if (dealInfo.askAmountEok) formData.append("askAmountEok", String(dealInfo.askAmountEok));

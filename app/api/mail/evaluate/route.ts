@@ -4,7 +4,7 @@ import { parsePdf } from "@/lib/parsePdf";
 import { evaluateIr } from "@/lib/evaluate";
 import { getDomain } from "@/lib/domains";
 import { getPersona } from "@/lib/personas";
-import { saveEvaluation } from "@/lib/mail/evaluationStore";
+import { saveEvaluation } from "@/lib/evaluations/store";
 
 export const runtime = "nodejs";
 // 300 = Vercel's hard ceiling on Hobby+Fluid Compute. Attachment RETR (up to ~100s for a large
@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     console.log(`[mail/evaluate] 평가 전체 완료 (누적 ${Date.now() - t0}ms)`);
 
     const evaluation = await saveEvaluation({
+      source: "mail",
       msgNum,
       attachmentIndex,
       attachmentFilename: attachment.filename,

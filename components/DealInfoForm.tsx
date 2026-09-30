@@ -1,6 +1,7 @@
 "use client";
 
 export interface DealInfoValue {
+  companyName?: string;
   stage?: string;
   preValuationEok?: number;
   askAmountEok?: number;
@@ -21,6 +22,17 @@ export function DealInfoForm({
 }) {
   return (
     <div className="space-y-5 rounded-lg border border-panel-border bg-panel p-5">
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium text-muted">기업명</span>
+        <input
+          type="text"
+          value={value.companyName ?? ""}
+          onChange={(e) => onChange({ ...value, companyName: e.target.value || undefined })}
+          className="w-full rounded-md border border-panel-border bg-background px-3 py-2 text-sm focus:border-accent focus:outline-none"
+          placeholder="예: 안다테크"
+        />
+      </label>
+
       <div>
         <p className="mb-2 text-sm font-medium text-muted">투자단계</p>
         <div className="grid grid-cols-3 gap-2">

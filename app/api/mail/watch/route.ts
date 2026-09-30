@@ -3,7 +3,9 @@ import { checkForNewMail, sendTestAlert } from "@/lib/mail/watcher";
 import { readWatchState } from "@/lib/mail/watchStore";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+// checkForNewMail now auto-evaluates newly-classified IR mail after sending alerts — needs
+// headroom; 300 is Vercel's hard ceiling on Hobby+Fluid Compute.
+export const maxDuration = 300;
 
 /** Status of the background watcher — for the dashboard to display. */
 export async function GET() {
