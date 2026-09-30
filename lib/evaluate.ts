@@ -3,7 +3,7 @@ import type { Domain } from "./domains";
 import { CATEGORY_LABELS } from "./domains";
 import type { Persona } from "./personas/schema";
 import { buildSystemPrompt, buildUserMessage, type DealInfo } from "./buildPrompt";
-import type { EvaluationReport } from "./reportSchema";
+import type { EvaluationReport, InvestmentAttractivenessAssessment } from "./reportSchema";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
@@ -17,7 +17,7 @@ const CITED_POINT_SCHEMA = {
   required: ["text", "pageRefs"],
 } as const;
 
-const INVESTMENT_ATTRACTIVENESS_SCHEMA = {
+const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
   type: "object",
   description:
     "내부 심사역 전용 투자 매력도 진단. industryFit/categoryScores와 달리 투자 판단 언어를 명시적으로 허용함.",
@@ -48,9 +48,16 @@ const INVESTMENT_ATTRACTIVENESS_SCHEMA = {
     concerns: { type: "array", items: CITED_POINT_SCHEMA },
   },
   required: ["overallScore", "summary", "criteria", "strongPoints", "concerns"],
-} as const;
+};
 
-function buildReportTool(mode: "external" | "internal"): Anthropic.Tool {
+const INVESTMENT_TOOL: Anthropic.Tool = {
+  name: "submit_investment_attractiveness",
+  description: "내부 심사역 전용 투자 매력도 진단을 구조화된 형태로 제출합니다.",
+  strict: true,
+  input_schema: INVESTMENT_ATTRACTIVENESS_SCHEMA,
+};
+
+function buildReportTool(): Anthropic.Tool {
   const properties: Record<string, unknown> = {
       totalScore: { type: "integer", description: "0에서 100 사이의 점수" },
       verdictTag: { type: "string", description: "예: 'Pre-A 적합'" },
@@ -189,11 +196,6 @@ function buildReportTool(mode: "external" | "internal"): Anthropic.Tool {
     "reviewerQuestions",
   ];
 
-  if (mode === "internal") {
-    properties.investmentAttractiveness = INVESTMENT_ATTRACTIVENESS_SCHEMA;
-    required.push("investmentAttractiveness");
-  }
-
   return {
     name: "submit_report",
     description: "IR 평가 결과를 구조화된 형태로 제출합니다.",
@@ -245,31 +247,45 @@ export async function evaluateIr(
   const client = new Anthropic({ apiKey });
   const system = buildSystemPrompt(persona, domain, mode);
   const userMessage = buildUserMessage(markedText, dealInfo);
-  const reportTool = buildReportTool(mode);
 
-  const attempt = async (): Promise<EvaluationReport> => {
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: 8000,
-      system,
-      messages: [{ role: "user", content: userMessage }],
-      tools: [reportTool],
-      tool_choice: { type: "tool", name: "submit_report" },
-    });
+  // Two separate strict tool calls instead of one combined schema. investmentAttractiveness
+  // used to be merged into submit_report's schema, but that pushed the strict-mode constrained
+  // grammar over Anthropic's compilation size limit ("compiled grammar is too large" 400 —
+  // deterministic, so retrying the combined call never helped). Splitting keeps each schema
+  // small enough for strict mode, which non-strict mode couldn't reliably replace: without it,
+  // the model garbled nested fields (e.g. dumped raw tool-call syntax into a string field).
+  const runToolCall = async <T>(tool: Anthropic.Tool): Promise<T> => {
+    const attempt = async (): Promise<T> => {
+      const response = await client.messages.create({
+        model: MODEL,
+        max_tokens: 8000,
+        system,
+        messages: [{ role: "user", content: userMessage }],
+        tools: [tool],
+        tool_choice: { type: "tool", name: tool.name },
+      });
+      const toolUse = response.content.find(
+        (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
+      );
+      if (!toolUse) {
+        throw new Error("모델이 구조화된 결과를 반환하지 않았습니다.");
+      }
+      return toolUse.input as T;
+    };
 
-    const toolUse = response.content.find(
-      (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
-    );
-    if (!toolUse) {
-      throw new Error("모델이 구조화된 결과를 반환하지 않았습니다.");
+    try {
+      return await attempt();
+    } catch (err) {
+      console.error(`evaluateIr ${tool.name} 첫 시도 실패, 재시도:`, err);
+      return await attempt();
     }
-    return fillCategoryLabels(toolUse.input as EvaluationReport);
   };
 
-  try {
-    return await attempt();
-  } catch (err) {
-    console.error("evaluateIr first attempt failed, retrying once:", err);
-    return await attempt();
+  const report = fillCategoryLabels(await runToolCall<EvaluationReport>(buildReportTool()));
+
+  if (mode === "internal") {
+    report.investmentAttractiveness = await runToolCall<InvestmentAttractivenessAssessment>(INVESTMENT_TOOL);
   }
+
+  return report;
 }
