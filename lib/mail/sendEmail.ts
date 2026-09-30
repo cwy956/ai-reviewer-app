@@ -9,6 +9,7 @@ export interface SendEmailParams {
   to: string;
   subject: string;
   text: string;
+  attachments?: { filename: string; content: Buffer }[];
 }
 
 export interface SendEmailResult {
@@ -23,7 +24,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   }
   // Without a verified sending domain in Resend, only their shared onboarding@resend.dev sender
   // works — it can send to any recipient, so it's a fine default until a real domain is verified.
-  const from = process.env.RESEND_FROM_EMAIL || "AI 심사역 메일함 알림 <onboarding@resend.dev>";
+  const from = process.env.RESEND_FROM_EMAIL || "ANDA 페르소나 <onboarding@resend.dev>";
 
   try {
     const res = await fetch(RESEND_API_URL, {
@@ -37,6 +38,10 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
         to: [params.to],
         subject: params.subject,
         text: params.text,
+        attachments: params.attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.content.toString("base64"),
+        })),
       }),
     });
 
