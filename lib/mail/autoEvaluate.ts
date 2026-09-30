@@ -16,7 +16,7 @@ import type { ClassifiedMail } from "./classify";
  * allowed to jeopardize the notification/watch-state flow it's called after.
  */
 export async function autoEvaluateIrMails(mails: ClassifiedMail[]): Promise<void> {
-  const irMails = mails.filter((m) => m.category === "ir" && m.domainId);
+  const irMails = mails.filter((m) => m.category === "ir" && m.domainId && m.hasAttachment);
   if (irMails.length === 0) return;
 
   const personas = await listPersonas();
