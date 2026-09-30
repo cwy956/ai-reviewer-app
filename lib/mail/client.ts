@@ -13,6 +13,12 @@ export interface MailSummary {
 const COMMAND_TIMEOUT_MS = 15_000;
 const CHUNK_SIZE = 25; // reconnect every N messages so one long session can't idle-timeout on the server
 const CHUNK_WALLCLOCK_TIMEOUT_MS = 45_000; // hard ceiling per chunk — protects against a hang that per-command timeouts don't catch (e.g. during the connect/auth handshake)
+// RETR-ing one full message (attachments included, e.g. a multi-MB PDF) is a single much bigger
+// transfer than the TOP-based header/snippet fetches above — 15s/45s was tuned for those and
+// was timing out on real attachments (e.g. a ~5MB PDF), so a full-message fetch gets its own,
+// more generous budget.
+const RETR_COMMAND_TIMEOUT_MS = 60_000;
+const RETR_WALLCLOCK_TIMEOUT_MS = 100_000;
 
 // Safety net: a POP3/TLS socket can emit a late 'error' event after its owning promise has
 // already settled (e.g. the server force-closes the connection a moment after we've moved on).
@@ -33,7 +39,7 @@ if (typeof process !== "undefined" && !globalThis.__mailProcessGuardsInstalled) 
   });
 }
 
-function createClient(): InstanceType<typeof Pop3Command> {
+function createClient(timeoutMs: number = COMMAND_TIMEOUT_MS): InstanceType<typeof Pop3Command> {
   const host = process.env.MAIL_HOST;
   const port = Number(process.env.MAIL_PORT || 995);
   const user = process.env.MAIL_USER;
@@ -41,12 +47,15 @@ function createClient(): InstanceType<typeof Pop3Command> {
   if (!host || !user || !password) {
     throw new Error("메일 서버 환경변수(MAIL_HOST/MAIL_USER/MAIL_PASSWORD)가 .env.local에 설정되어 있지 않습니다.");
   }
-  return new Pop3Command({ host, port, user, password, tls: port === 995, timeout: COMMAND_TIMEOUT_MS });
+  return new Pop3Command({ host, port, user, password, tls: port === 995, timeout: timeoutMs });
 }
 
 /** Runs `fn` with a fresh POP3 client, guaranteeing QUIT is attempted and errors never leak as unhandled rejections. */
-async function withClient<T>(fn: (pop3: InstanceType<typeof Pop3Command>) => Promise<T>): Promise<T> {
-  const pop3 = createClient();
+async function withClient<T>(
+  fn: (pop3: InstanceType<typeof Pop3Command>) => Promise<T>,
+  timeoutMs: number = COMMAND_TIMEOUT_MS
+): Promise<T> {
+  const pop3 = createClient(timeoutMs);
   try {
     return await fn(pop3);
   } finally {
@@ -171,8 +180,8 @@ async function retrieveAndParse(msgNum: number, label: string) {
       const raw = (await pop3.RETR(msgNum)) as string;
       const parsed = await simpleParser(raw);
       return { raw, parsed };
-    }),
-    CHUNK_WALLCLOCK_TIMEOUT_MS,
+    }, RETR_COMMAND_TIMEOUT_MS),
+    RETR_WALLCLOCK_TIMEOUT_MS,
     label
   );
 }

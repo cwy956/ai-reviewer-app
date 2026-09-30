@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { fetchFullMessage } from "@/lib/mail/client";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ msgNum: string }> }) {
   const { msgNum } = await params;

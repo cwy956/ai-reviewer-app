@@ -7,7 +7,9 @@ import { getPersona } from "@/lib/personas";
 import { saveEvaluation } from "@/lib/mail/evaluationStore";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+// Generous ceiling: attachment RETR (up to ~100s for a large PDF) + PDF parse + two sequential
+// Claude tool calls (base report, then investmentAttractiveness) can add up past 120s.
+export const maxDuration = 280;
 
 export async function POST(request: Request) {
   try {
