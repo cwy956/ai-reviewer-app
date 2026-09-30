@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { domains } from "@/lib/domains";
-import type { Persona } from "@/lib/personas/schema";
 import type { EvaluationReport } from "@/lib/reportSchema";
 import { ResultReport } from "@/components/ResultReport";
+
+// 심사역 선택 자체를 없앰 — AI 심사역 하나로 통일 (개별 심사역이 각자 페르소나를 유지보수하는
+// 일이 실제로 일어나지 않아서). 기본 페르소나의 id는 고정값.
+const DEFAULT_PERSONA_ID = "default";
 
 interface DealEvaluationSummary {
   totalScore: number;
@@ -65,7 +68,6 @@ function SourceTag({ source }: { source: "mail" | "platform" }) {
 
 export default function IrDealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [personas, setPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,11 +75,10 @@ export default function IrDealsPage() {
   const [fullMail, setFullMail] = useState<FullMail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [latestReport, setLatestReport] = useState<EvaluationReport | null>(null);
-  const [reportPersonaName, setReportPersonaName] = useState("");
+  const [reportPersonaName, setReportPersonaName] = useState("AI 심사역");
   const [showEvalForm, setShowEvalForm] = useState(false);
 
   const [formDomainId, setFormDomainId] = useState("");
-  const [formPersonaId, setFormPersonaId] = useState("");
   const [formAttachmentIndex, setFormAttachmentIndex] = useState(0);
   const [evaluating, setEvaluating] = useState(false);
   const [evalError, setEvalError] = useState<string | null>(null);
@@ -96,17 +97,13 @@ export default function IrDealsPage() {
 
   useEffect(() => {
     loadDeals();
-    fetch("/api/personas")
-      .then((res) => res.json())
-      .then((data) => setPersonas((data.personas ?? []).filter((p: Persona) => !p.isDefault)))
-      .catch(() => setPersonas([]));
   }, []);
 
   async function openDeal(deal: Deal) {
     setSelected(deal);
     setFullMail(null);
     setLatestReport(null);
-    setReportPersonaName("");
+    setReportPersonaName("AI 심사역");
     setShowEvalForm(deal.source === "mail" && !deal.evaluation);
     setEvalError(null);
     setFormDomainId(deal.domainId ?? "");
@@ -120,7 +117,6 @@ export default function IrDealsPage() {
         if (!res.ok) throw new Error(data.error || "제출 내역을 불러오지 못했습니다.");
         setLatestReport(data.submission.report);
         setReportPersonaName(data.submission.personaName);
-        setFormPersonaId(data.submission.personaId);
         setFormDomainId(data.submission.domainId);
         return;
       }
@@ -138,7 +134,6 @@ export default function IrDealsPage() {
         if (latest) {
           setLatestReport(latest.report);
           setReportPersonaName(latest.personaName);
-          setFormPersonaId(latest.personaId);
           setFormDomainId(latest.domainId);
         }
       }
@@ -150,7 +145,7 @@ export default function IrDealsPage() {
   }
 
   async function runEvaluation() {
-    if (!selected || selected.source !== "mail" || !formDomainId || !formPersonaId || !fullMail?.attachments.length) return;
+    if (!selected || selected.source !== "mail" || !formDomainId || !fullMail?.attachments.length) return;
     setEvaluating(true);
     setEvalError(null);
     try {
@@ -161,7 +156,7 @@ export default function IrDealsPage() {
           msgNum: selected.msgNum,
           attachmentIndex: formAttachmentIndex,
           domainId: formDomainId,
-          personaId: formPersonaId,
+          personaId: DEFAULT_PERSONA_ID,
         }),
       });
       const data = await res.json();
@@ -177,8 +172,6 @@ export default function IrDealsPage() {
     }
   }
 
-  const selectedPersona = personas.find((p) => p.id === formPersonaId);
-
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-5xl px-4 py-12">
@@ -192,8 +185,8 @@ export default function IrDealsPage() {
             <a href="/dashboard" className="text-muted underline hover:text-accent-soft">
               현황 대시보드
             </a>
-            <a href="/mailbox" className="text-muted underline hover:text-accent-soft">
-              메일함 자동 분류
+            <a href="/mailbox/sent" className="text-muted underline hover:text-accent-soft">
+              이메일 발송 이력
             </a>
           </div>
         </header>
@@ -273,13 +266,13 @@ export default function IrDealsPage() {
                     onClick={() => setShowEvalForm(true)}
                     className="mb-4 text-xs text-accent-soft underline hover:text-accent"
                   >
-                    다시 평가하기 (다른 심사역·영역으로)
+                    다시 평가하기 (다른 영역으로)
                   </button>
                 )}
                 <ResultReport
                   report={latestReport}
-                  reviewerName={selectedPersona?.name ?? reportPersonaName}
-                  reviewerAffiliation={selectedPersona?.affiliation ?? ""}
+                  reviewerName={reportPersonaName}
+                  reviewerAffiliation="안다아시아벤처스"
                   onReset={() => setSelected(null)}
                   internalMode
                 />
@@ -323,27 +316,11 @@ export default function IrDealsPage() {
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-muted">심사역</label>
-                      <select
-                        value={formPersonaId}
-                        onChange={(e) => setFormPersonaId(e.target.value)}
-                        className="w-full rounded-md border border-panel-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
-                      >
-                        <option value="">심사역 선택</option>
-                        {personas.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
                     {evalError && <p className="text-sm text-bad">{evalError}</p>}
 
                     <button
                       onClick={runEvaluation}
-                      disabled={evaluating || !formDomainId || !formPersonaId}
+                      disabled={evaluating || !formDomainId}
                       className="w-full rounded-lg bg-accent px-4 py-3 font-semibold text-white transition enabled:hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {evaluating ? "평가 중... (최대 1~2분)" : "AI 평가 시작"}

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { parsePdf } from "@/lib/parsePdf";
 import { evaluateIr } from "@/lib/evaluate";
 import { getDomain } from "@/lib/domains";
@@ -8,27 +7,17 @@ import { saveEvaluation } from "@/lib/evaluations/store";
 import type { DealInfo } from "@/lib/buildPrompt";
 
 export const runtime = "nodejs";
-// internal 모드는 evaluateIr이 순차로 2번(기본 리포트 + 투자매력도) 호출하므로 120s로는
-// 빠듯할 수 있어 여유를 둠 (external 모드는 1번만 호출해서 훨씬 빨리 끝남).
-export const maxDuration = 280;
+export const maxDuration = 120;
 
-async function isInternalRequest(): Promise<boolean> {
-  const password = process.env.INTERNAL_ACCESS_PASSWORD;
-  if (!password) return false;
-  const cookieStore = await cookies();
-  return cookieStore.get("internal_auth")?.value === password;
-}
-
+// 공개 IR 평가 페이지(/)에서만 쓰는 라우트 — 항상 external 모드(완성도+산업적합성만, 투자
+// 매력도 없음). 내부 심사용 업로드 페이지(/internal-evaluate)는 제거됨: 메일함 IR은
+// 자동평가되고, 남은 수동 평가는 /ir-deals가 담당(/api/mail/evaluate 사용).
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
     const domainId = formData.get("domainId");
     const personaId = formData.get("personaId");
-    const requestedMode = formData.get("mode") === "internal" ? "internal" : "external";
-    // Never trust the client-supplied mode alone — the internal-only investment-attractiveness
-    // axis must not leak to anonymous startups hitting this same public endpoint from "/".
-    const mode = requestedMode === "internal" && (await isInternalRequest()) ? "internal" : "external";
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "IR 파일이 필요합니다." }, { status: 400 });
@@ -58,29 +47,25 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const parsed = await parsePdf(buffer);
 
-    const report = await evaluateIr(persona, domain, parsed.markedText, dealInfo, mode);
+    const report = await evaluateIr(persona, domain, parsed.markedText, dealInfo, "external");
 
-    // Only real startup submissions through the public page go into the internal IR list —
-    // internal staff testing arbitrary files via /internal-evaluate (mode === "internal") aren't
-    // actual pipeline deals. Best-effort: never let a save failure break the response the
-    // startup is waiting on.
-    if (mode === "external") {
-      const companyName = (formData.get("companyName") as string) || undefined;
-      // Awaited (not fire-and-forget) — a serverless function can be frozen/torn down right
-      // after the response is sent, which would silently drop an un-awaited background save.
-      try {
-        await saveEvaluation({
-          source: "platform",
-          companyName,
-          attachmentFilename: file.name,
-          domainId,
-          personaId,
-          personaName: persona.name,
-          report,
-        });
-      } catch (err) {
-        console.error("플랫폼 제출 저장 실패 (평가 결과는 정상 반환됨):", err);
-      }
+    // Every real submission through this page goes into the internal IR list. Awaited (not
+    // fire-and-forget) — a serverless function can be frozen/torn down right after the response
+    // is sent, which would silently drop an un-awaited background save. Best-effort: never let a
+    // save failure break the response the startup is waiting on.
+    const companyName = (formData.get("companyName") as string) || undefined;
+    try {
+      await saveEvaluation({
+        source: "platform",
+        companyName,
+        attachmentFilename: file.name,
+        domainId,
+        personaId,
+        personaName: persona.name,
+        report,
+      });
+    } catch (err) {
+      console.error("플랫폼 제출 저장 실패 (평가 결과는 정상 반환됨):", err);
     }
 
     return NextResponse.json({

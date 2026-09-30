@@ -288,13 +288,8 @@ export default function DashboardPage() {
                 </a>
               </li>
               <li>
-                <a href="/mailbox" className="text-foreground hover:text-accent-soft">
-                  메일함 자동 분류로
-                </a>
-              </li>
-              <li>
-                <a href="/internal-evaluate" className="text-foreground hover:text-accent-soft">
-                  AI 심사역으로 IR 평가하기
+                <a href="/onboarding" className="text-foreground hover:text-accent-soft">
+                  심사역·관리팀 등록
                 </a>
               </li>
               <li>
