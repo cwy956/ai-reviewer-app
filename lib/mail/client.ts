@@ -170,7 +170,10 @@ export interface FullMailContent {
   subject: string;
   date: string;
   text: string;
-  attachments: { index: number; filename: string; size: number }[];
+  /** `content` (base64) is only populated for the PDF attachment when `includeAttachmentContent`
+   * is requested — lets a caller reuse the bytes already pulled down by this same RETR instead of
+   * triggering a second full POP3 fetch just to preview it (see fetchAttachmentContent). */
+  attachments: { index: number; filename: string; size: number; content?: string }[];
 }
 
 /** RETR + parse, shared by fetchFullMessage and fetchAttachmentContent so both see the same message. */
@@ -190,19 +193,35 @@ async function retrieveAndParse(msgNum: number, label: string) {
  * Fetches and fully parses one message on demand (via POP3 RETR, unlike the TOP-based summary
  * fetch) — used when the dashboard's "전체 보기" is clicked. Only plain text is returned (not
  * HTML) to avoid rendering untrusted remote content.
+ *
+ * `includeAttachmentContent` embeds the first PDF attachment's bytes (base64) in the response —
+ * used by the IR deal popup so its inline PDF preview can reuse this call's RETR instead of
+ * firing a second full POP3 fetch for the same message just to get bytes already parsed here.
+ * Only the first PDF is included (not every attachment) to keep the payload bounded to what's
+ * actually previewed.
  */
-export async function fetchFullMessage(msgNum: number): Promise<FullMailContent> {
+export async function fetchFullMessage(
+  msgNum: number,
+  options?: { includeAttachmentContent?: boolean }
+): Promise<FullMailContent> {
   const { raw, parsed } = await retrieveAndParse(msgNum, `메일 #${msgNum} 전체 조회`);
 
   const from = parsed.from?.text ?? naiveHeaderLookup(raw, "From") ?? "(알 수 없음)";
   const subject = parsed.subject ?? naiveHeaderLookup(raw, "Subject") ?? "(제목 없음)";
   const date = parsed.date ? parsed.date.toISOString() : (naiveHeaderLookup(raw, "Date") ?? "");
   const text = (parsed.text ?? "").trim();
-  const attachments = (parsed.attachments ?? []).map((a, index) => ({
-    index,
-    filename: a.filename ?? `첨부파일-${index + 1}`,
-    size: a.size,
-  }));
+  let embeddedPdf = false;
+  const attachments = (parsed.attachments ?? []).map((a, index) => {
+    const filename = a.filename ?? `첨부파일-${index + 1}`;
+    const isFirstPdf = !embeddedPdf && filename.toLowerCase().endsWith(".pdf");
+    if (isFirstPdf) embeddedPdf = true;
+    return {
+      index,
+      filename,
+      size: a.size,
+      ...(options?.includeAttachmentContent && isFirstPdf ? { content: a.content.toString("base64") } : {}),
+    };
+  });
 
   return { msgNum, from, subject, date, text, attachments };
 }

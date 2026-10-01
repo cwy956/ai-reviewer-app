@@ -12,7 +12,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ msgNum:
   }
 
   try {
-    const mail = await fetchFullMessage(num);
+    const mail = await fetchFullMessage(num, { includeAttachmentContent: true });
     return NextResponse.json(mail);
   } catch (err) {
     return NextResponse.json(

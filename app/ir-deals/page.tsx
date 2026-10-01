@@ -33,6 +33,9 @@ interface FullMailAttachment {
   index: number;
   filename: string;
   size: number;
+  /** base64 — only present for the first .pdf attachment, embedded by the server so the inline
+   * preview can reuse this same fetch instead of a second POP3 round trip. */
+  content?: string;
 }
 
 interface FullMail {
@@ -90,6 +93,8 @@ export default function IrDealsPage() {
 
   const [selected, setSelected] = useState<Deal | null>(null);
   const [fullMail, setFullMail] = useState<FullMail | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const pdfPreviewUrlRef = useRef<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [latestReport, setLatestReport] = useState<EvaluationReport | null>(null);
   const [currentEvaluationId, setCurrentEvaluationId] = useState<number | null>(null);
@@ -121,9 +126,35 @@ export default function IrDealsPage() {
     loadDeals();
   }, []);
 
+  // 언마운트 시에도 떠 있는 blob URL을 정리 (일반적인 경우는 openDeal에서 매번 교체 전에 직접
+  // revoke하지만, 페이지를 벗어나는 경우까지 커버).
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrlRef.current) URL.revokeObjectURL(pdfPreviewUrlRef.current);
+    };
+  }, []);
+
+  function setPdfPreviewFromBase64(base64: string | undefined) {
+    if (pdfPreviewUrlRef.current) {
+      URL.revokeObjectURL(pdfPreviewUrlRef.current);
+      pdfPreviewUrlRef.current = null;
+    }
+    if (!base64) {
+      setPdfPreviewUrl(null);
+      return;
+    }
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    pdfPreviewUrlRef.current = url;
+    setPdfPreviewUrl(url);
+  }
+
   async function openDeal(deal: Deal) {
     setSelected(deal);
     setFullMail(null);
+    setPdfPreviewFromBase64(undefined);
     setLatestReport(null);
     setCurrentEvaluationId(null);
     setReportPersonaName("AI 심사역");
@@ -165,6 +196,8 @@ export default function IrDealsPage() {
 
       const [mailData, evalData] = await Promise.all([fullMailPromise, evalPromise]);
       setFullMail(mailData);
+      const pdfAttachment = mailData.attachments.find((a) => a.content);
+      setPdfPreviewFromBase64(pdfAttachment?.content);
 
       const latest = evalData?.evaluations?.[0];
       if (latest) {
@@ -178,6 +211,11 @@ export default function IrDealsPage() {
     } finally {
       setDetailLoading(false);
     }
+  }
+
+  function closeModal() {
+    setSelected(null);
+    setPdfPreviewFromBase64(undefined);
   }
 
   async function runEvaluation() {
@@ -310,7 +348,7 @@ export default function IrDealsPage() {
       {selected && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setSelected(null)}
+          onClick={closeModal}
         >
           <div
             className="flex h-[94vh] w-full max-w-[95vw] flex-col rounded-xl border border-panel-border bg-panel p-6 shadow-lg"
@@ -324,7 +362,7 @@ export default function IrDealsPage() {
                 <h3 className="font-semibold text-foreground">{selected.title}</h3>
                 <p className="mt-1 text-xs text-muted">{selected.subtitle}</p>
               </div>
-              <button onClick={() => setSelected(null)} className="shrink-0 text-sm text-muted hover:text-foreground">
+              <button onClick={closeModal} className="shrink-0 text-sm text-muted hover:text-foreground">
                 닫기
               </button>
             </div>
@@ -363,14 +401,15 @@ export default function IrDealsPage() {
                       <p className="whitespace-pre-wrap text-sm text-foreground/90">
                         {fullMail.text || "(본문 텍스트가 없습니다 — 첨부파일 또는 서식만 있는 메일일 수 있어요)"}
                       </p>
-                      {(() => {
+                      {pdfPreviewUrl && (() => {
                         const pdf = fullMail.attachments.find((a) => a.filename.toLowerCase().endsWith(".pdf"));
-                        if (!pdf) return null;
                         return (
                           <div className="mt-4">
-                            <p className="mb-2 text-xs font-semibold text-muted">IR 자료 미리보기 — {pdf.filename}</p>
+                            <p className="mb-2 text-xs font-semibold text-muted">
+                              IR 자료 미리보기{pdf ? ` — ${pdf.filename}` : ""}
+                            </p>
                             <iframe
-                              src={`/api/mail/message/${selected.msgNum}/attachment/${pdf.index}?inline=1#navpanes=0&toolbar=0&view=FitH`}
+                              src={`${pdfPreviewUrl}#navpanes=0&toolbar=0&view=FitH`}
                               className="h-[85vh] w-full rounded-md border border-panel-border bg-white"
                             />
                           </div>
@@ -404,7 +443,7 @@ export default function IrDealsPage() {
                         report={latestReport}
                         reviewerName={reportPersonaName}
                         reviewerAffiliation="안다아시아벤처스"
-                        onReset={() => setSelected(null)}
+                        onReset={closeModal}
                         internalMode
                         evaluationId={currentEvaluationId ?? undefined}
                         dealTitle={selected.title}
