@@ -1,7 +1,8 @@
 import { getDomain } from "../domains";
 import { listPersonas } from "../personas/store";
 import type { Persona } from "../personas/schema";
-import { fetchAttachmentContent, fetchFullMessage } from "./client";
+import { fetchFullMessage } from "./client";
+import { setCachedMessage } from "./messageCache";
 import { parsePdf, assessExtractionQuality } from "../parsePdf";
 import { evaluateIr } from "../evaluate";
 import { listEvaluationsForMail, saveEvaluation } from "../evaluations/store";
@@ -47,15 +48,18 @@ async function autoEvaluateOne(mail: ClassifiedMail, defaultPersona: Persona): P
     return; // already auto-evaluated (e.g. a previous run got this far before timing out later)
   }
 
-  const full = await fetchFullMessage(mail.msgNum);
-  const pdfIndex = full.attachments.findIndex((a) => a.filename.toLowerCase().endsWith(".pdf"));
-  if (pdfIndex === -1) {
+  // includeAttachmentContent: true — 같은 POP3 RETR로 첨부 바이트까지 받아서, 평가 후 이 결과를
+  // 그대로 공유 캐시에 올려두면(아래 setCachedMessage) /ir-deals 팝업을 처음 여는 사람조차 POP3를
+  // 안 타게 됨. 예전엔 여기서 fetchFullMessage + fetchAttachmentContent로 같은 메시지를 두 번
+  // RETR했음.
+  const full = await fetchFullMessage(mail.msgNum, { includeAttachmentContent: true });
+  const pdfAttachment = full.attachments.find((a) => a.content);
+  if (!pdfAttachment) {
     console.log(`[auto-evaluate] 메일 #${mail.msgNum}에 PDF 첨부파일이 없어 자동 평가를 건너뜁니다.`);
     return;
   }
 
-  const attachment = await fetchAttachmentContent(mail.msgNum, pdfIndex);
-  const parsed = await parsePdf(attachment.content);
+  const parsed = await parsePdf(Buffer.from(pdfAttachment.content!, "base64"));
   const report = await evaluateIr(defaultPersona, domain, parsed.markedText, {}, "internal");
   report.extractionQuality = assessExtractionQuality(parsed);
 
@@ -63,13 +67,15 @@ async function autoEvaluateOne(mail: ClassifiedMail, defaultPersona: Persona): P
     source: "mail",
     msgNum: mail.msgNum,
     companyName: report.companyName || undefined,
-    attachmentIndex: pdfIndex,
-    attachmentFilename: attachment.filename,
+    attachmentIndex: pdfAttachment.index,
+    attachmentFilename: pdfAttachment.filename,
     domainId: domain.id,
     personaId: defaultPersona.id,
     personaName: defaultPersona.name,
     report,
   });
+
+  await setCachedMessage(mail.msgNum, full);
 
   console.log(`[auto-evaluate] 메일 #${mail.msgNum} 자동 평가 완료 (totalScore=${report.totalScore})`);
 }
