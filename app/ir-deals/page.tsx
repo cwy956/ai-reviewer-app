@@ -77,7 +77,6 @@ export default function IrDealsPage() {
   const [latestReport, setLatestReport] = useState<EvaluationReport | null>(null);
   const [reportPersonaName, setReportPersonaName] = useState("AI 심사역");
   const [showEvalForm, setShowEvalForm] = useState(false);
-  const [showOriginal, setShowOriginal] = useState(true);
 
   const [formDomainId, setFormDomainId] = useState("");
   const [formAttachmentIndex, setFormAttachmentIndex] = useState(0);
@@ -106,7 +105,6 @@ export default function IrDealsPage() {
     setLatestReport(null);
     setReportPersonaName("AI 심사역");
     setShowEvalForm(deal.source === "mail" && !deal.evaluation);
-    setShowOriginal(true);
     setEvalError(null);
     setFormDomainId(deal.domainId ?? "");
     setFormAttachmentIndex(0);
@@ -243,10 +241,10 @@ export default function IrDealsPage() {
           onClick={() => setSelected(null)}
         >
           <div
-            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-panel-border bg-panel p-6 shadow-lg"
+            className="flex h-[85vh] w-full max-w-6xl flex-col rounded-xl border border-panel-border bg-panel p-6 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="mb-1">
                   <SourceTag source={selected.source} />
@@ -261,123 +259,123 @@ export default function IrDealsPage() {
 
             {detailLoading && <p className="text-sm text-muted">불러오는 중...</p>}
 
-            {!detailLoading && selected.source === "mail" && fullMail && (
-              <div className="mb-6 rounded-lg border border-panel-border bg-background p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-xs font-semibold text-muted">원문</p>
-                  <button
-                    onClick={() => setShowOriginal((v) => !v)}
-                    className="text-xs text-accent-soft underline hover:text-accent"
-                  >
-                    {showOriginal ? "접기" : "펼치기"}
-                  </button>
-                </div>
-                {showOriginal && (
-                  <>
-                    {fullMail.attachments.length > 0 && (
-                      <div className="mb-3 space-y-1.5">
-                        {fullMail.attachments.map((a) => (
-                          <div
-                            key={a.index}
-                            className="flex items-center justify-between gap-3 rounded-md border border-panel-border px-3 py-2 text-sm"
-                          >
-                            <span className="truncate">
-                              📎 {a.filename} <span className="text-xs text-muted">({(a.size / 1024).toFixed(0)}KB)</span>
-                            </span>
-                            <a
-                              href={`/api/mail/message/${selected.msgNum}/attachment/${a.index}`}
-                              download={a.filename}
-                              className="shrink-0 text-xs font-medium text-accent-soft hover:underline"
+            {!detailLoading && (
+              <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
+                {/* 왼쪽: 원문 — 메일 소스는 첨부파일 + 본문, 플랫폼 소스는 저장되지 않았다는 안내 */}
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-panel-border bg-background p-4 md:basis-1/2">
+                  <p className="mb-2 text-xs font-semibold text-muted">원문</p>
+                  {selected.source === "mail" && fullMail && (
+                    <>
+                      {fullMail.attachments.length > 0 && (
+                        <div className="mb-3 space-y-1.5">
+                          {fullMail.attachments.map((a) => (
+                            <div
+                              key={a.index}
+                              className="flex items-center justify-between gap-3 rounded-md border border-panel-border px-3 py-2 text-sm"
                             >
-                              다운로드
-                            </a>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <p className="max-h-64 overflow-y-auto whitespace-pre-wrap text-sm text-foreground/90">
-                      {fullMail.text || "(본문 텍스트가 없습니다 — 첨부파일 또는 서식만 있는 메일일 수 있어요)"}
+                              <span className="truncate">
+                                📎 {a.filename}{" "}
+                                <span className="text-xs text-muted">({(a.size / 1024).toFixed(0)}KB)</span>
+                              </span>
+                              <a
+                                href={`/api/mail/message/${selected.msgNum}/attachment/${a.index}`}
+                                download={a.filename}
+                                className="shrink-0 text-xs font-medium text-accent-soft hover:underline"
+                              >
+                                다운로드
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <p className="whitespace-pre-wrap text-sm text-foreground/90">
+                        {fullMail.text || "(본문 텍스트가 없습니다 — 첨부파일 또는 서식만 있는 메일일 수 있어요)"}
+                      </p>
+                    </>
+                  )}
+                  {selected.source === "platform" && (
+                    <p className="text-xs text-muted">
+                      {selected.subtitle} (업로드된 원본 파일은 저장되지 않아 다시 열람할 수 없어요 — 평가 결과만
+                      남아있어요)
                     </p>
-                  </>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
 
-            {!detailLoading && selected.source === "platform" && latestReport && (
-              <p className="mb-6 rounded-lg border border-panel-border bg-background p-4 text-xs text-muted">
-                원문: {selected.subtitle} (업로드된 원본 파일은 저장되지 않아 다시 열람할 수 없어요 — 평가 결과만
-                남아있어요)
-              </p>
-            )}
+                {/* 오른쪽: 평가 결과 또는 평가 폼 */}
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-panel-border bg-background p-4 md:basis-1/2">
+                  <p className="mb-2 text-xs font-semibold text-muted">평가</p>
 
-            {!detailLoading && latestReport && (
-              <>
-                {selected.source === "mail" && (
-                  <button
-                    onClick={() => setShowEvalForm(true)}
-                    className="mb-4 text-xs text-accent-soft underline hover:text-accent"
-                  >
-                    다시 평가하기 (다른 영역으로)
-                  </button>
-                )}
-                <ResultReport
-                  report={latestReport}
-                  reviewerName={reportPersonaName}
-                  reviewerAffiliation="안다아시아벤처스"
-                  onReset={() => setSelected(null)}
-                  internalMode
-                />
-              </>
-            )}
+                  {latestReport && (
+                    <>
+                      {selected.source === "mail" && (
+                        <button
+                          onClick={() => setShowEvalForm(true)}
+                          className="mb-4 text-xs text-accent-soft underline hover:text-accent"
+                        >
+                          다시 평가하기 (다른 영역으로)
+                        </button>
+                      )}
+                      <ResultReport
+                        report={latestReport}
+                        reviewerName={reportPersonaName}
+                        reviewerAffiliation="안다아시아벤처스"
+                        onReset={() => setSelected(null)}
+                        internalMode
+                      />
+                    </>
+                  )}
 
-            {!detailLoading && selected.source === "mail" && showEvalForm && fullMail && (
-              <div className="space-y-4">
-                {fullMail.attachments.length === 0 ? (
-                  <p className="rounded-lg border border-warn/30 bg-warn/5 p-4 text-sm text-warn">
-                    이 메일에는 첨부파일이 없어서 평가할 자료가 없어요.
-                  </p>
-                ) : (
-                  <>
-                    <div>
-                      <label className="mb-1 block text-xs text-muted">평가할 첨부파일</label>
-                      <select
-                        value={formAttachmentIndex}
-                        onChange={(e) => setFormAttachmentIndex(Number(e.target.value))}
-                        className="w-full rounded-md border border-panel-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
-                      >
-                        {fullMail.attachments.map((a) => (
-                          <option key={a.index} value={a.index}>
-                            {a.filename} ({(a.size / 1024).toFixed(0)}KB)
-                          </option>
-                        ))}
-                      </select>
+                  {selected.source === "mail" && showEvalForm && fullMail && (
+                    <div className="space-y-4">
+                      {fullMail.attachments.length === 0 ? (
+                        <p className="rounded-lg border border-warn/30 bg-warn/5 p-4 text-sm text-warn">
+                          이 메일에는 첨부파일이 없어서 평가할 자료가 없어요.
+                        </p>
+                      ) : (
+                        <>
+                          <div>
+                            <label className="mb-1 block text-xs text-muted">평가할 첨부파일</label>
+                            <select
+                              value={formAttachmentIndex}
+                              onChange={(e) => setFormAttachmentIndex(Number(e.target.value))}
+                              className="w-full rounded-md border border-panel-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+                            >
+                              {fullMail.attachments.map((a) => (
+                                <option key={a.index} value={a.index}>
+                                  {a.filename} ({(a.size / 1024).toFixed(0)}KB)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs text-muted">영역</label>
+                            <select
+                              value={formDomainId}
+                              onChange={(e) => setFormDomainId(e.target.value)}
+                              className="w-full rounded-md border border-panel-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+                            >
+                              <option value="">영역 선택</option>
+                              {domains.map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  {d.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          {evalError && <p className="text-sm text-bad">{evalError}</p>}
+
+                          <button
+                            onClick={runEvaluation}
+                            disabled={evaluating || !formDomainId}
+                            className="w-full rounded-lg bg-accent px-4 py-3 font-semibold text-white transition enabled:hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            {evaluating ? "평가 중... (최대 1~2분)" : "AI 평가 시작"}
+                          </button>
+                        </>
+                      )}
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-muted">영역</label>
-                      <select
-                        value={formDomainId}
-                        onChange={(e) => setFormDomainId(e.target.value)}
-                        className="w-full rounded-md border border-panel-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
-                      >
-                        <option value="">영역 선택</option>
-                        {domains.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {evalError && <p className="text-sm text-bad">{evalError}</p>}
-
-                    <button
-                      onClick={runEvaluation}
-                      disabled={evaluating || !formDomainId}
-                      className="w-full rounded-lg bg-accent px-4 py-3 font-semibold text-white transition enabled:hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      {evaluating ? "평가 중... (최대 1~2분)" : "AI 평가 시작"}
-                    </button>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>
