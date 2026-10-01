@@ -64,6 +64,23 @@ export async function readBacklogCache(): Promise<BacklogCache | null> {
   };
 }
 
+/** Upserts classified mails into the shared `classified_mails` table (by msg_num) — used both by
+ * the one-time backlog run and by the live watcher for each new batch it classifies. Without
+ * this, a mail classified by the live watcher only ever existed in that request's memory: it
+ * could still trigger an alert/auto-evaluation, but would never show up in /ir-deals (which reads
+ * from this table), silently "disappearing" the moment the request finished. */
+export async function upsertClassifiedMails(mails: ClassifiedMail[]): Promise<void> {
+  if (mails.length === 0) return;
+  const supabase = getSupabase();
+  const rows = mails.map(mailToRow);
+  // Supabase/PostgREST caps request size — chunk large backlogs (e.g. 1,400+ mails) to be safe.
+  const CHUNK = 500;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await supabase.from("classified_mails").upsert(rows.slice(i, i + CHUNK), { onConflict: "msg_num" });
+    if (error) throw new Error(`메일 분류 결과 저장 실패: ${error.message}`);
+  }
+}
+
 /** Upserts every classified mail (by msg_num) and records when this batch finished. */
 export async function writeBacklogCache(cache: BacklogCache): Promise<void> {
   const supabase = getSupabase();
@@ -76,14 +93,7 @@ export async function writeBacklogCache(cache: BacklogCache): Promise<void> {
     );
   if (metaError) throw new Error(`백로그 메타데이터 저장 실패: ${metaError.message}`);
 
-  if (cache.mails.length === 0) return;
-  const rows = cache.mails.map(mailToRow);
-  // Supabase/PostgREST caps request size — chunk large backlogs (e.g. 1,400+ mails) to be safe.
-  const CHUNK = 500;
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const { error } = await supabase.from("classified_mails").upsert(rows.slice(i, i + CHUNK), { onConflict: "msg_num" });
-    if (error) throw new Error(`백로그 메일 저장 실패: ${error.message}`);
-  }
+  await upsertClassifiedMails(cache.mails);
 }
 
 /**

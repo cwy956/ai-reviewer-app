@@ -3,6 +3,7 @@ import { classifyMails, type ClassifiedMail } from "./classify";
 import { sendEmailAlerts } from "./notifyEmail";
 import { readWatchState, writeWatchState } from "./watchStore";
 import { autoEvaluateIrMails } from "./autoEvaluate";
+import { upsertClassifiedMails } from "./backlogStore";
 
 // 메일 유입량이 적은(며칠에 1통꼴) 지금 상황에서 5통 기준은 몇 주씩 알림이 안 갈 수 있어서
 // 1통으로 낮춤 — 유입량이 적으니 스팸 걱정도 없음. 유입량이 늘면 다시 올릴 수 있음.
@@ -63,6 +64,9 @@ export async function checkForNewMail(): Promise<WatchCheckResult> {
   if (newSinceLastAlert >= THRESHOLD) {
     const newMails = await fetchRecentMailSummaries(newSinceLastAlert);
     const classified = await classifyMails(newMails);
+    // 분류 결과를 영구 저장 — 이게 없으면 알림만 보내고 끝나서, 이 메일은 /ir-deals에 영영
+    // 나타나지 않음(백로그 때는 이 저장이 있었지만 실시간 감시 경로엔 빠져 있었음).
+    await upsertClassifiedMails(classified);
     await dispatchAlerts(classified, "");
     await writeWatchState({ lastAlertedCount: total, lastCheckedAt: new Date().toISOString(), lastAlertedAt: new Date().toISOString() });
 
