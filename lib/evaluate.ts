@@ -11,10 +11,14 @@ const CITED_POINT_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
-    text: { type: "string" },
+    headline: {
+      type: "string",
+      description: "10~20자 내외의 짧고 핵심적인 라벨. 이것만 읽어도 무슨 내용인지 바로 파악돼야 함 (예: '팀 정보 전무', '3년 연속 매출 2배 성장').",
+    },
+    text: { type: "string", description: "headline을 뒷받침하는 1문장 부연 설명" },
     pageRefs: { type: "array", items: { type: "integer" } },
   },
-  required: ["text", "pageRefs"],
+  required: ["headline", "text", "pageRefs"],
 } as const;
 
 const ACTION_ITEM_SCHEMA = {
@@ -76,6 +80,11 @@ const INVESTMENT_TOOL: Anthropic.Tool = {
 
 function buildReportTool(): Anthropic.Tool {
   const properties: Record<string, unknown> = {
+      companySnapshot: {
+        type: "string",
+        description:
+          "이 회사가 무엇을 하는 회사인지 2~3문장으로 간결하고 명확하게 설명 (업종, 핵심 제품/서비스, 타깃 고객, 현재 단계). 심사역이 점수나 분석을 보기 전에 가장 먼저 읽는 문장이므로 전문용어 없이 평이하게 쓰세요. 자료가 부실해도 확인 가능한 선에서 사실 기반으로 작성하고, 추정이면 '~로 추정됨'이라고 밝히세요.",
+      },
       totalScore: { type: "integer", description: "0에서 100 사이의 점수" },
       verdictTag: { type: "string", description: "예: 'Pre-A 적합'" },
       verdictSummary: { type: "string", description: "한 줄 총평" },
@@ -200,6 +209,7 @@ function buildReportTool(): Anthropic.Tool {
   };
 
   const required = [
+    "companySnapshot",
     "totalScore",
     "verdictTag",
     "verdictSummary",

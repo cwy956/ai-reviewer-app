@@ -1,5 +1,5 @@
 import type { IndustryFitAssessment } from "@/lib/reportSchema";
-import { PageBadges } from "./StrengthsImprovements";
+import { CitedPointItem } from "./StrengthsImprovements";
 
 export function IndustryFitPanel({ industryFit }: { industryFit: IndustryFitAssessment }) {
   return (
@@ -14,12 +14,9 @@ export function IndustryFitPanel({ industryFit }: { industryFit: IndustryFitAsse
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <h4 className="mb-2 text-sm font-medium text-good">탄탄한 지점</h4>
-          <ul className="space-y-2 text-sm">
+          <ul className="space-y-3 text-sm">
             {industryFit.strongPoints.map((s, i) => (
-              <li key={i} className="leading-relaxed">
-                {s.text}
-                <PageBadges pageRefs={s.pageRefs} />
-              </li>
+              <CitedPointItem key={i} point={s} />
             ))}
             {industryFit.strongPoints.length === 0 && (
               <li className="text-muted">특별히 짚을 만한 지점이 없습니다.</li>
@@ -28,12 +25,9 @@ export function IndustryFitPanel({ industryFit }: { industryFit: IndustryFitAsse
         </div>
         <div>
           <h4 className="mb-2 text-sm font-medium text-accent-soft">❓ 의문이 남는 지점 (산업 기준 대비)</h4>
-          <ul className="space-y-2 text-sm">
+          <ul className="space-y-3 text-sm">
             {industryFit.concerns.map((s, i) => (
-              <li key={i} className="leading-relaxed">
-                {s.text}
-                <PageBadges pageRefs={s.pageRefs} />
-              </li>
+              <CitedPointItem key={i} point={s} />
             ))}
             {industryFit.concerns.length === 0 && <li className="text-muted">특별히 짚을 만한 지점이 없습니다.</li>}
           </ul>

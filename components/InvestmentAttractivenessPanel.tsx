@@ -1,5 +1,5 @@
 import type { InvestmentAttractivenessAssessment } from "@/lib/reportSchema";
-import { PageBadges } from "./StrengthsImprovements";
+import { PageBadges, CitedPointItem } from "./StrengthsImprovements";
 
 export function InvestmentAttractivenessPanel({
   investmentAttractiveness,
@@ -44,12 +44,9 @@ export function InvestmentAttractivenessPanel({
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <h4 className="mb-2 text-sm font-medium text-good">긍정 요인</h4>
-          <ul className="space-y-2 text-sm">
+          <ul className="space-y-3 text-sm">
             {investmentAttractiveness.strongPoints.map((s, i) => (
-              <li key={i} className="leading-relaxed">
-                {s.text}
-                <PageBadges pageRefs={s.pageRefs} />
-              </li>
+              <CitedPointItem key={i} point={s} />
             ))}
             {investmentAttractiveness.strongPoints.length === 0 && (
               <li className="text-muted">특별히 짚을 만한 지점이 없습니다.</li>
@@ -58,12 +55,9 @@ export function InvestmentAttractivenessPanel({
         </div>
         <div>
           <h4 className="mb-2 text-sm font-medium text-bad">🚩 우려 요인 (투자 리스크)</h4>
-          <ul className="space-y-2 text-sm">
+          <ul className="space-y-3 text-sm">
             {investmentAttractiveness.concerns.map((s, i) => (
-              <li key={i} className="leading-relaxed">
-                {s.text}
-                <PageBadges pageRefs={s.pageRefs} />
-              </li>
+              <CitedPointItem key={i} point={s} />
             ))}
             {investmentAttractiveness.concerns.length === 0 && (
               <li className="text-muted">특별히 짚을 만한 지점이 없습니다.</li>

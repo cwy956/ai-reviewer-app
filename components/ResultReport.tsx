@@ -15,6 +15,16 @@ import { PeerResearchPanel } from "./PeerResearchPanel";
 
 const EMAIL_GATE_SCORE = 80;
 
+function CompanySnapshotCard({ companySnapshot }: { companySnapshot?: string }) {
+  if (!companySnapshot) return null;
+  return (
+    <div className="rounded-lg border border-panel-border bg-panel p-5">
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">한눈에 보기</p>
+      <p className="text-base font-medium leading-relaxed text-foreground">{companySnapshot}</p>
+    </div>
+  );
+}
+
 function ExtractionQualityBanner({ extractionQuality }: { extractionQuality: EvaluationReport["extractionQuality"] }) {
   if (!extractionQuality?.lowConfidence) return null;
   const pct = Math.round(extractionQuality.emptyPageRatio * 100);
@@ -144,6 +154,7 @@ export function ResultReport({
 
   return (
     <div className="space-y-5">
+      <CompanySnapshotCard companySnapshot={report.companySnapshot} />
       <Hero report={report} internalMode={internalMode} />
       <ExtractionQualityBanner extractionQuality={report.extractionQuality} />
 

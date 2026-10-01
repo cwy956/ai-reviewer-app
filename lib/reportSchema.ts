@@ -1,6 +1,10 @@
 export type InvestmentStage = "Seed" | "Pre-A" | "Series A" | "Series B+";
 
 export interface CitedPoint {
+  /** Short, scannable label (~10~20자) — the thing a reviewer skimming the page should catch in
+   * under a second. Optional only because reports saved before this field existed won't have it;
+   * every newly generated report includes it. */
+  headline?: string;
   text: string;
   pageRefs: number[];
 }
@@ -94,6 +98,9 @@ export interface PeerResearchResult {
 }
 
 export interface EvaluationReport {
+  /** The very first thing a reviewer reads — 2~3 plain-language sentences on what this company
+   * actually does, before any scoring. Optional only for reports saved before this field existed. */
+  companySnapshot?: string;
   totalScore: number;
   verdictTag: string;
   verdictSummary: string;

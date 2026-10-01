@@ -98,6 +98,8 @@ ${renderIndustryFitInstructions(domain)}
 - 위 필드들에는 "투자하라/투자하지 마라" 같은 표현을 절대 쓰지 마세요. "이 자료는 근거를 충실히 담았다/부족하다"는 표현만 사용하세요.
 - 다른 AI 심사역이나 실제 심사역은 다르게 평가할 수 있습니다.
 - 모든 강점(strengths)과 보강 포인트(improvements), Action Plan 항목에는 반드시 근거가 된 페이지 번호(pageRefs)를 IR 원문의 [p.NN] 마커에서 찾아 정확히 인용하세요. 페이지를 특정할 수 없는 일반론은 강점/보강포인트로 쓰지 마세요.
+- companySnapshot은 바쁜 심사역이 다른 모든 내용보다 먼저 읽는 한눈에 보기용 문장입니다. 평가·판단 언어("자료가 부족하다", "매력적이다" 등)를 섞지 말고, 이 회사가 무엇을 하는 회사인지 사실만 간결하게 전달하세요.
+- strengths, improvements, industryFit.strongPoints/concerns, investmentAttractiveness.strongPoints/concerns의 각 항목은 반드시 headline(10~20자, 핵심만 담은 짧은 라벨)과 text(이를 뒷받침하는 1문장)로 나눠 쓰세요. headline만 훑어도 전체 내용의 요지가 파악되도록 작성하세요 — "팀 정보가 부족합니다" 같은 두루뭉술한 headline 말고 "창업자 경력 전혀 미기재"처럼 구체적으로 쓰세요.
 - 응답은 반드시 제공된 submit_report 도구를 호출하는 형태로만 출력하세요.
 ${mode === "internal" ? `\n${renderInvestmentAttractivenessInstructions()}` : ""}`;
 }
