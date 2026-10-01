@@ -291,6 +291,19 @@ export default function IrDealsPage() {
                       <p className="whitespace-pre-wrap text-sm text-foreground/90">
                         {fullMail.text || "(본문 텍스트가 없습니다 — 첨부파일 또는 서식만 있는 메일일 수 있어요)"}
                       </p>
+                      {(() => {
+                        const pdf = fullMail.attachments.find((a) => a.filename.toLowerCase().endsWith(".pdf"));
+                        if (!pdf) return null;
+                        return (
+                          <div className="mt-4">
+                            <p className="mb-2 text-xs font-semibold text-muted">IR 자료 미리보기 — {pdf.filename}</p>
+                            <iframe
+                              src={`/api/mail/message/${selected.msgNum}/attachment/${pdf.index}?inline=1`}
+                              className="h-[85vh] w-full rounded-md border border-panel-border bg-white"
+                            />
+                          </div>
+                        );
+                      })()}
                     </>
                   )}
                   {selected.source === "platform" && (
