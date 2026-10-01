@@ -241,7 +241,7 @@ export default function IrDealsPage() {
           onClick={() => setSelected(null)}
         >
           <div
-            className="flex h-[85vh] w-full max-w-6xl flex-col rounded-xl border border-panel-border bg-panel p-6 shadow-lg"
+            className="flex h-[94vh] w-full max-w-[95vw] flex-col rounded-xl border border-panel-border bg-panel p-6 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
@@ -298,7 +298,7 @@ export default function IrDealsPage() {
                           <div className="mt-4">
                             <p className="mb-2 text-xs font-semibold text-muted">IR 자료 미리보기 — {pdf.filename}</p>
                             <iframe
-                              src={`/api/mail/message/${selected.msgNum}/attachment/${pdf.index}?inline=1`}
+                              src={`/api/mail/message/${selected.msgNum}/attachment/${pdf.index}?inline=1#navpanes=0&toolbar=0&view=FitH`}
                               className="h-[85vh] w-full rounded-md border border-panel-border bg-white"
                             />
                           </div>
