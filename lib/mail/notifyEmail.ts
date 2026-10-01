@@ -11,6 +11,27 @@ interface FullMailForForwarding {
   attachments: { filename: string; content: Buffer }[];
 }
 
+/**
+ * Strips `target="_blank"` and inline `on*` event handlers (e.g. `onclick="window.open(...)"`)
+ * from forwarded HTML. Real-world case that forced this: a Daum "대용량첨부" download button
+ * opens via `window.open(...)`, which browsers/ad-blockers classify as a *popup* request —
+ * uBlock Origin's EasyPrivacy list blanket-blocks popups to `attach.mail.daum.net`, so the
+ * button silently did nothing for anyone running an ad-blocker. Removing the popup trigger
+ * leaves the plain `href` intact, so the same click just navigates normally instead — a type of
+ * request generic blocklists don't block, since blocking normal navigation would break the web.
+ * Other webmail providers (Naver, Gmail, etc.) use similar JS-popup download buttons, so this is
+ * applied to every forwarded mail, not special-cased to Daum.
+ */
+function neutralizePopupLinks(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/\son\w+\s*=\s*"(?:[^"\\]|\\.)*"/gi, "")
+    .replace(/\son\w+\s*=\s*'(?:[^'\\]|\\.)*'/gi, "")
+    .replace(/\son\w+\s*=\s*[^\s>]+/gi, "")
+    .replace(/\starget\s*=\s*"_blank"/gi, "")
+    .replace(/\starget\s*=\s*'_blank'/gi, "");
+}
+
 /** Fetches one mail's full body (text + original HTML, when it has one) + every attachment's
  * actual bytes, for forwarding verbatim in the alert email — now that alerts go out per-mail
  * (threshold=1), the recipient should see the real thing, not a one-line summary + dashboard
@@ -28,7 +49,7 @@ async function fetchFullMailForForwarding(msgNum: number): Promise<FullMailForFo
       console.error(`[notify] 메일 #${msgNum} 첨부파일 #${a.index}(${a.filename}) 조회 실패, 건너뜀:`, err);
     }
   }
-  return { text: full.text, html: full.html, attachments };
+  return { text: full.text, html: full.html ? neutralizePopupLinks(full.html) : null, attachments };
 }
 
 function buildEmailBody(
