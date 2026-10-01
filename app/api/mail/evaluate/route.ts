@@ -47,6 +47,7 @@ export async function POST(request: Request) {
     const evaluation = await saveEvaluation({
       source: "mail",
       msgNum,
+      companyName: report.companyName || undefined,
       attachmentIndex,
       attachmentFilename: attachment.filename,
       domainId,

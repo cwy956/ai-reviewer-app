@@ -62,6 +62,7 @@ async function autoEvaluateOne(mail: ClassifiedMail, defaultPersona: Persona): P
   await saveEvaluation({
     source: "mail",
     msgNum: mail.msgNum,
+    companyName: report.companyName || undefined,
     attachmentIndex: pdfIndex,
     attachmentFilename: attachment.filename,
     domainId: domain.id,

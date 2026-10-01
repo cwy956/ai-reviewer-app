@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     // fire-and-forget) — a serverless function can be frozen/torn down right after the response
     // is sent, which would silently drop an un-awaited background save. Best-effort: never let a
     // save failure break the response the startup is waiting on.
-    const companyName = (formData.get("companyName") as string) || undefined;
+    const companyName = (formData.get("companyName") as string) || report.companyName || undefined;
     try {
       await saveEvaluation({
         source: "platform",

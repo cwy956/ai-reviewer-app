@@ -3,6 +3,14 @@ import { getSupabase } from "@/lib/db/supabaseClient";
 import { listLatestMailEvaluationsFor, listPlatformSubmissionSummaries } from "@/lib/evaluations/store";
 import { getDomain } from "@/lib/domains";
 
+/** Prefer the company name (extracted from the IR material itself) over a raw email subject or
+ * "기업명 미입력" placeholder — a subject line like "투자문의드립니다" tells a skimming reviewer
+ * nothing about which deal it is. */
+function buildDealTitle(companyName: string | null, companyTagline: string | null, fallback: string): string {
+  if (!companyName) return fallback;
+  return companyTagline ? `${companyName} | ${companyTagline}` : companyName;
+}
+
 export interface IrDeal {
   source: "mail" | "platform";
   key: string;
@@ -47,7 +55,7 @@ export async function GET() {
         key: `mail-${m.msg_num}`,
         msgNum: m.msg_num as number,
         evaluationId: evaluation?.id ?? null,
-        title: m.subject as string,
+        title: buildDealTitle(evaluation?.companyName ?? null, evaluation?.companyTagline ?? null, m.subject as string),
         subtitle: m.from_address as string,
         date: (m.mail_date as string) ?? (m.processed_at as string),
         domainId,
@@ -71,7 +79,7 @@ export async function GET() {
         key: `platform-${s.id}`,
         msgNum: null,
         evaluationId: s.id,
-        title: s.companyName || "(기업명 미입력)",
+        title: buildDealTitle(s.companyName, s.companyTagline, "(기업명 미입력)"),
         subtitle: s.attachmentFilename,
         date: s.evaluatedAt,
         domainId: s.domainId,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { domains } from "@/lib/domains";
 import type { EvaluationReport } from "@/lib/reportSchema";
 import { ResultReport } from "@/components/ResultReport";
@@ -101,6 +101,10 @@ export default function IrDealsPage() {
   const [evaluating, setEvaluating] = useState(false);
   const [evalError, setEvalError] = useState<string | null>(null);
 
+  // 같은 딜을 다시 열 때 POP3로 원문을 또 가져오지 않도록 세션 내 캐시 — 메일 원문 조회가
+  // 느린 첨부파일일수록(POP3 RETR) 이 캐시가 체감 속도에 크게 기여함.
+  const fullMailCache = useRef<Map<number, FullMail>>(new Map());
+
   function loadDeals() {
     setLoading(true);
     fetch("/api/ir-deals")
@@ -141,22 +145,33 @@ export default function IrDealsPage() {
         return;
       }
 
-      // source === "mail"
-      const res = await fetch(`/api/mail/message/${deal.msgNum}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "메일을 불러오지 못했습니다.");
-      setFullMail(data as FullMail);
+      // source === "mail" — 원문(POP3, 느림)과 평가 이력(DB, 빠름)은 서로 무관하니 병렬로 요청.
+      // 원문은 세션 내 캐시가 있으면 네트워크 요청 자체를 건너뜀 — 같은 딜을 다시 열 때 POP3를
+      // 또 타는 게 체감 속도 저하의 큰 부분이었음.
+      const cached = fullMailCache.current.get(deal.msgNum!);
+      const fullMailPromise: Promise<FullMail> = cached
+        ? Promise.resolve(cached)
+        : fetch(`/api/mail/message/${deal.msgNum}`)
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.error) throw new Error(data.error || "메일을 불러오지 못했습니다.");
+              fullMailCache.current.set(deal.msgNum!, data as FullMail);
+              return data as FullMail;
+            });
 
-      if (deal.evaluation) {
-        const evalRes = await fetch(`/api/mail/evaluate/${deal.msgNum}`);
-        const evalData = await evalRes.json();
-        const latest = evalData.evaluations?.[0];
-        if (latest) {
-          setLatestReport(latest.report);
-          setCurrentEvaluationId(latest.id);
-          setReportPersonaName(latest.personaName);
-          setFormDomainId(latest.domainId);
-        }
+      const evalPromise = deal.evaluation
+        ? fetch(`/api/mail/evaluate/${deal.msgNum}`).then((res) => res.json())
+        : Promise.resolve(null);
+
+      const [mailData, evalData] = await Promise.all([fullMailPromise, evalPromise]);
+      setFullMail(mailData);
+
+      const latest = evalData?.evaluations?.[0];
+      if (latest) {
+        setLatestReport(latest.report);
+        setCurrentEvaluationId(latest.id);
+        setReportPersonaName(latest.personaName);
+        setFormDomainId(latest.domainId);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");

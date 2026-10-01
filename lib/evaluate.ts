@@ -80,6 +80,16 @@ const INVESTMENT_TOOL: Anthropic.Tool = {
 
 function buildReportTool(): Anthropic.Tool {
   const properties: Record<string, unknown> = {
+      companyName: {
+        type: "string",
+        description:
+          "IR 자료에 명시된 회사/브랜드의 실제 이름 (이메일 제목이 아니라 자료 본문·표지에서 찾을 것). 자료 어디에도 이름이 없으면 빈 문자열로 두세요.",
+      },
+      companyTagline: {
+        type: "string",
+        description:
+          "10~15자 내외로 이 회사가 뭘 하는지 핵심만 (예: '비건 뷰티 브랜드 운영', '해상풍력 발전플랜트 기술 개발'). 딜 목록에 '회사명 | 태그라인' 형태로 노출됩니다.",
+      },
       companySnapshot: {
         type: "string",
         description:
@@ -209,6 +219,8 @@ function buildReportTool(): Anthropic.Tool {
   };
 
   const required = [
+    "companyName",
+    "companyTagline",
     "companySnapshot",
     "totalScore",
     "verdictTag",

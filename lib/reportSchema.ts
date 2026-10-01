@@ -98,6 +98,11 @@ export interface PeerResearchResult {
 }
 
 export interface EvaluationReport {
+  /** Extracted from the IR material itself — the deal list shouldn't have to fall back to a raw
+   * email subject line ("마이 오 마이 투자문의드립니다.") when the deck already states the name. */
+  companyName?: string;
+  /** ~10~15자 짧은 한 줄 — 딜 목록에서 "회사명 | 태그라인" 형태로 쓰임. */
+  companyTagline?: string;
   /** The very first thing a reviewer reads — 2~3 plain-language sentences on what this company
    * actually does, before any scoring. Optional only for reports saved before this field existed. */
   companySnapshot?: string;
