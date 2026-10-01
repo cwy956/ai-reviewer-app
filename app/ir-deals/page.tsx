@@ -77,6 +77,7 @@ export default function IrDealsPage() {
   const [latestReport, setLatestReport] = useState<EvaluationReport | null>(null);
   const [reportPersonaName, setReportPersonaName] = useState("AI 심사역");
   const [showEvalForm, setShowEvalForm] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(true);
 
   const [formDomainId, setFormDomainId] = useState("");
   const [formAttachmentIndex, setFormAttachmentIndex] = useState(0);
@@ -105,6 +106,7 @@ export default function IrDealsPage() {
     setLatestReport(null);
     setReportPersonaName("AI 심사역");
     setShowEvalForm(deal.source === "mail" && !deal.evaluation);
+    setShowOriginal(true);
     setEvalError(null);
     setFormDomainId(deal.domainId ?? "");
     setFormAttachmentIndex(0);
@@ -258,6 +260,55 @@ export default function IrDealsPage() {
             </div>
 
             {detailLoading && <p className="text-sm text-muted">불러오는 중...</p>}
+
+            {!detailLoading && selected.source === "mail" && fullMail && (
+              <div className="mb-6 rounded-lg border border-panel-border bg-background p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-semibold text-muted">원문</p>
+                  <button
+                    onClick={() => setShowOriginal((v) => !v)}
+                    className="text-xs text-accent-soft underline hover:text-accent"
+                  >
+                    {showOriginal ? "접기" : "펼치기"}
+                  </button>
+                </div>
+                {showOriginal && (
+                  <>
+                    {fullMail.attachments.length > 0 && (
+                      <div className="mb-3 space-y-1.5">
+                        {fullMail.attachments.map((a) => (
+                          <div
+                            key={a.index}
+                            className="flex items-center justify-between gap-3 rounded-md border border-panel-border px-3 py-2 text-sm"
+                          >
+                            <span className="truncate">
+                              📎 {a.filename} <span className="text-xs text-muted">({(a.size / 1024).toFixed(0)}KB)</span>
+                            </span>
+                            <a
+                              href={`/api/mail/message/${selected.msgNum}/attachment/${a.index}`}
+                              download={a.filename}
+                              className="shrink-0 text-xs font-medium text-accent-soft hover:underline"
+                            >
+                              다운로드
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="max-h-64 overflow-y-auto whitespace-pre-wrap text-sm text-foreground/90">
+                      {fullMail.text || "(본문 텍스트가 없습니다 — 첨부파일 또는 서식만 있는 메일일 수 있어요)"}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+
+            {!detailLoading && selected.source === "platform" && latestReport && (
+              <p className="mb-6 rounded-lg border border-panel-border bg-background p-4 text-xs text-muted">
+                원문: {selected.subtitle} (업로드된 원본 파일은 저장되지 않아 다시 열람할 수 없어요 — 평가 결과만
+                남아있어요)
+              </p>
+            )}
 
             {!detailLoading && latestReport && (
               <>
