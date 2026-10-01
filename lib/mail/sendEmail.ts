@@ -9,6 +9,8 @@ export interface SendEmailParams {
   to: string;
   subject: string;
   text: string;
+  /** Rendered HTML alternative — most clients prefer this over `text` when both are present. */
+  html?: string;
   attachments?: { filename: string; content: Buffer }[];
 }
 
@@ -38,6 +40,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
         to: [params.to],
         subject: params.subject,
         text: params.text,
+        html: params.html,
         attachments: params.attachments?.map((a) => ({
           filename: a.filename,
           content: a.content.toString("base64"),

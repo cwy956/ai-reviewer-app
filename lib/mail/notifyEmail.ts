@@ -3,18 +3,22 @@ import { isInternalSender } from "./classify";
 import { groupMailsByRecipient } from "./routing";
 import { sendEmail } from "./sendEmail";
 import { appendSendLog, type SendLogEntry } from "./sendLogStore";
-import { fetchFullMessage, fetchAttachmentContent } from "./client";
+import { fetchMessageForForwarding, fetchAttachmentContent } from "./client";
 
 interface FullMailForForwarding {
   text: string;
+  html: string | null;
   attachments: { filename: string; content: Buffer }[];
 }
 
-/** Fetches one mail's full body + every attachment's actual bytes, for forwarding verbatim in
- * the alert email — now that alerts go out per-mail (threshold=1), the recipient should see the
- * real thing, not a one-line summary + dashboard link. */
+/** Fetches one mail's full body (text + original HTML, when it has one) + every attachment's
+ * actual bytes, for forwarding verbatim in the alert email — now that alerts go out per-mail
+ * (threshold=1), the recipient should see the real thing, not a one-line summary + dashboard
+ * link. Keeping the HTML matters: many "attachments" are really a download-link button that only
+ * exists in the HTML part (e.g. Daum's large-file links) — a plain-text-only forward would make
+ * that link invisible/unusable. */
 async function fetchFullMailForForwarding(msgNum: number): Promise<FullMailForForwarding> {
-  const full = await fetchFullMessage(msgNum);
+  const full = await fetchMessageForForwarding(msgNum);
   const attachments: { filename: string; content: Buffer }[] = [];
   for (const a of full.attachments) {
     try {
@@ -24,7 +28,7 @@ async function fetchFullMailForForwarding(msgNum: number): Promise<FullMailForFo
       console.error(`[notify] 메일 #${msgNum} 첨부파일 #${a.index}(${a.filename}) 조회 실패, 건너뜀:`, err);
     }
   }
-  return { text: full.text, attachments };
+  return { text: full.text, html: full.html, attachments };
 }
 
 function buildEmailBody(
@@ -41,6 +45,45 @@ function buildEmailBody(
   return `공용 메일함(andaasiavc@andaasiavc.com)에 담당하시는 영역의 새 메일이 도착했습니다.\n\n${sections.join("\n\n─────────\n\n")}${link}\n\n(이 메일은 ANDA 페르소나가 자동으로 분류·발송한 알림입니다.)`;
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Builds an HTML alternative only when at least one mail in the batch actually has an HTML
+ * part — otherwise returns null and the plain-text body is used alone. Mail without HTML falls
+ * back to its plain text, preformatted, inside the same layout. */
+function buildEmailHtml(
+  mails: ClassifiedMail[],
+  fullByMsgNum: Map<number, FullMailForForwarding>,
+  dashboardUrl?: string
+): string | null {
+  if (!mails.some((m) => fullByMsgNum.get(m.msgNum)?.html)) return null;
+
+  const sections = mails.map((m, i) => {
+    const full = fullByMsgNum.get(m.msgNum);
+    const bodyHtml =
+      full?.html ||
+      `<pre style="white-space:pre-wrap;font-family:inherit;">${escapeHtml(full?.text?.trim() || m.snippet || "(본문을 불러오지 못했습니다)")}</pre>`;
+    return `
+      <div style="margin:0 0 24px;padding:0 0 24px;border-bottom:1px solid #ddd;">
+        <p style="font-weight:bold;margin:0 0 4px;">[${i + 1}] ${escapeHtml(m.subject)}</p>
+        <p style="color:#666;font-size:13px;margin:0 0 16px;">발신: ${escapeHtml(m.from)}</p>
+        <div>${bodyHtml}</div>
+      </div>`;
+  });
+
+  const link = dashboardUrl
+    ? `<p><a href="${dashboardUrl}">대시보드에서 전체 보기</a></p>`
+    : "";
+
+  return `<div style="font-family:sans-serif;font-size:14px;color:#111;max-width:680px;">
+    <p>공용 메일함(andaasiavc@andaasiavc.com)에 담당하시는 영역의 새 메일이 도착했습니다.</p>
+    ${sections.join("")}
+    ${link}
+    <p style="color:#999;font-size:12px;">(이 메일은 ANDA 페르소나가 자동으로 분류·발송한 알림입니다.)</p>
+  </div>`;
+}
+
 export interface EmailAlertResult {
   sentGroups: number;
   failedGroups: number;
@@ -49,9 +92,9 @@ export interface EmailAlertResult {
 
 /**
  * Sends one email per recipient (reviewer persona or admin team), grouping every mail routed
- * to them into a single message — forwarding each mail's full text and attachments verbatim
- * (not just a subject line) — and logs each mail's send outcome for the "발송 여부" dashboard.
- * Internal-domain senders are dropped before routing.
+ * to them into a single message — forwarding each mail's full content (HTML when available,
+ * so download-link buttons stay clickable) and attachments verbatim — and logs each mail's send
+ * outcome for the "발송 여부" dashboard. Internal-domain senders are dropped before routing.
  */
 export async function sendEmailAlerts(rawMails: ClassifiedMail[], dashboardUrl?: string): Promise<EmailAlertResult> {
   const mails = rawMails.filter((m) => !isInternalSender(m.from));
@@ -81,6 +124,7 @@ export async function sendEmailAlerts(rawMails: ClassifiedMail[], dashboardUrl?:
       to: group.email,
       subject: `[ANDA 페르소나] 새 메일 ${group.mails.length}통 도착 — ${subjectLabel}`,
       text: buildEmailBody(group.mails, fullByMsgNum, dashboardUrl),
+      html: buildEmailHtml(group.mails, fullByMsgNum, dashboardUrl) ?? undefined,
       attachments: attachments.length > 0 ? attachments : undefined,
     });
     if (result.ok) sentGroups++;

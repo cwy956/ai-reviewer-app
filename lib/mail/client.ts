@@ -207,6 +207,41 @@ export async function fetchFullMessage(msgNum: number): Promise<FullMailContent>
   return { msgNum, from, subject, date, text, attachments };
 }
 
+export interface ForwardableMailContent {
+  from: string;
+  subject: string;
+  text: string;
+  /** Raw HTML part, when the message has one — null for plain-text-only messages. */
+  html: string | null;
+  attachments: { index: number; filename: string; size: number }[];
+}
+
+/**
+ * Like fetchFullMessage, but keeps the HTML part — used only for forwarding a mail verbatim into
+ * an alert email (the recipient's own mail client renders it, same as if the mail had landed in
+ * their inbox directly). fetchFullMessage strips HTML deliberately because that one feeds our
+ * own app's UI, where rendering untrusted remote HTML would be a real risk; forwarding into an
+ * email a human opens in their own client doesn't share that risk — a text-only reduction there
+ * would just make unreadable/useless the common case of mail whose "attachment" is really an
+ * `<a href>` download-link button (e.g. Daum's large-file links), since those links usually ride
+ * only in the HTML part, not the fallback plain text.
+ */
+export async function fetchMessageForForwarding(msgNum: number): Promise<ForwardableMailContent> {
+  const { raw, parsed } = await retrieveAndParse(msgNum, `메일 #${msgNum} 전달용 조회`);
+
+  const from = parsed.from?.text ?? naiveHeaderLookup(raw, "From") ?? "(알 수 없음)";
+  const subject = parsed.subject ?? naiveHeaderLookup(raw, "Subject") ?? "(제목 없음)";
+  const text = (parsed.text ?? "").trim();
+  const html = typeof parsed.html === "string" ? parsed.html : null;
+  const attachments = (parsed.attachments ?? []).map((a, index) => ({
+    index,
+    filename: a.filename ?? `첨부파일-${index + 1}`,
+    size: a.size,
+  }));
+
+  return { from, subject, text, html, attachments };
+}
+
 /**
  * Downloads one attachment's bytes by re-fetching and re-parsing the message (POP3/mailparser
  * has no per-attachment fetch, and there's nowhere serverless to cache the parsed message
