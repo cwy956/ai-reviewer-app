@@ -11,6 +11,7 @@ import { StorylineTimeline } from "./StorylineTimeline";
 import { ActionPlanList } from "./ActionPlanList";
 import { ReviewerQuestions } from "./ReviewerQuestions";
 import { PeerResearchPlaceholder } from "./PeerResearchPlaceholder";
+import { PeerResearchPanel } from "./PeerResearchPanel";
 
 const EMAIL_GATE_SCORE = 80;
 
@@ -124,12 +125,19 @@ export function ResultReport({
   reviewerAffiliation,
   onReset,
   internalMode = false,
+  evaluationId,
+  dealTitle,
+  domainLabel,
 }: {
   report: EvaluationReport;
   reviewerName: string;
   reviewerAffiliation: string;
   onReset: () => void;
   internalMode?: boolean;
+  /** Needed only for the on-demand peer-research panel — omit to fall back to the placeholder. */
+  evaluationId?: number;
+  dealTitle?: string;
+  domainLabel?: string;
 }) {
   const [emailSent, setEmailSent] = useState<string | null>(null);
   const eligible = report.totalScore >= EMAIL_GATE_SCORE;
@@ -151,7 +159,16 @@ export function ResultReport({
       )}
       <CategoryDetail categoryScores={report.categoryScores} />
       <StorylineTimeline storyline={report.storyline} />
-      <PeerResearchPlaceholder />
+      {internalMode && evaluationId && dealTitle && domainLabel ? (
+        <PeerResearchPanel
+          evaluationId={evaluationId}
+          dealTitle={dealTitle}
+          domainLabel={domainLabel}
+          initial={report.peerResearch}
+        />
+      ) : (
+        <PeerResearchPlaceholder />
+      )}
       <ActionPlanList
         actionPlan={report.actionPlan}
         title="Action Plan (자료 보강)"

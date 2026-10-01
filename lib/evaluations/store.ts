@@ -1,5 +1,5 @@
 import { getSupabase } from "../db/supabaseClient";
-import type { EvaluationReport } from "../reportSchema";
+import type { EvaluationReport, PeerResearchResult } from "../reportSchema";
 
 export type EvaluationSource = "mail" | "platform";
 
@@ -88,6 +88,24 @@ export async function listPlatformSubmissionSummaries(): Promise<IrEvaluationSum
     .limit(500);
   if (error) throw new Error(`플랫폼 제출 목록 조회 실패: ${error.message}`);
   return (data ?? []).map(rowToSummary);
+}
+
+/** One evaluation by id, regardless of source — used by peer research, which only has the
+ * evaluation id to go on (the client already knows the deal title/domain, so no join needed). */
+export async function getEvaluationById(id: number): Promise<IrEvaluation | null> {
+  const { data, error } = await getSupabase().from("ir_evaluations").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`평가 결과 조회 실패: ${error.message}`);
+  return data ? rowToEvaluation(data) : null;
+}
+
+/** Merges peer research into an already-saved report (run on demand, after the main evaluation
+ * exists) — read-modify-write since the report column is one jsonb blob, not a set of columns. */
+export async function updatePeerResearch(id: number, peerResearch: PeerResearchResult): Promise<void> {
+  const evaluation = await getEvaluationById(id);
+  if (!evaluation) throw new Error("평가 결과를 찾을 수 없습니다.");
+  const updatedReport: EvaluationReport = { ...evaluation.report, peerResearch };
+  const { error } = await getSupabase().from("ir_evaluations").update({ report: updatedReport }).eq("id", id);
+  if (error) throw new Error(`피어 리서치 저장 실패: ${error.message}`);
 }
 
 /** One platform submission's full report, for the detail modal. */
