@@ -14,6 +14,73 @@ import { PeerResearchPlaceholder } from "./PeerResearchPlaceholder";
 
 const EMAIL_GATE_SCORE = 80;
 
+function ExtractionQualityBanner({ extractionQuality }: { extractionQuality: EvaluationReport["extractionQuality"] }) {
+  if (!extractionQuality?.lowConfidence) return null;
+  const pct = Math.round(extractionQuality.emptyPageRatio * 100);
+  return (
+    <div className="rounded-lg border border-bad/30 bg-bad/5 p-4 text-sm text-bad">
+      <p className="font-medium">⚠ 자료 추출 불완전 — 점수 신뢰도 낮음</p>
+      <p className="mt-1 text-bad/80">
+        전체 {extractionQuality.pageCount}페이지 중 {extractionQuality.emptyPageCount}페이지({pct}%)에서 텍스트를
+        추출하지 못했어요(스캔 이미지이거나 폰트가 깨진 자료일 수 있어요). 아래 점수는 실제보다 낮게 나왔을 수 있으니
+        원문을 직접 확인해보세요.
+      </p>
+    </div>
+  );
+}
+
+function Hero({ report, internalMode }: { report: EvaluationReport; internalMode: boolean }) {
+  const ia = report.investmentAttractiveness;
+  // 내부용이고 투자 매력도가 있으면 그 점수를 헤드라인으로 — 심사역이 가장 먼저 보고 싶어하는
+  // 숫자는 "자료가 체크리스트를 얼마나 채웠는지"가 아니라 "이 딜이 얼마나 매력적인지"라서.
+  if (internalMode && ia) {
+    return (
+      <div className="rounded-lg border border-accent/40 bg-accent/5 p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent-soft">
+              투자 매력도 진단 (내부 전용)
+            </span>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground">{ia.summary}</p>
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+              <span className="rounded-full bg-panel px-2 py-0.5">{report.verdictTag}</span>
+              <span>자료 충실도 {report.totalScore}/100 (별도 지표)</span>
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-4xl font-bold text-accent-soft">
+              {ia.overallScore}
+              <span className="text-lg text-muted">/100</span>
+            </div>
+            <p className="text-xs text-muted">투자 매력도</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-panel-border bg-panel p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent-soft">
+            {report.verdictTag}
+          </span>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground">{report.verdictSummary}</p>
+          <p className="mt-2 text-xs text-muted">IR 자료 충실도 점수 (투자 판단 아님)</p>
+        </div>
+        <div className="text-right">
+          <div className="text-4xl font-bold text-accent-soft">
+            {report.totalScore}
+            <span className="text-lg text-muted">/100</span>
+          </div>
+          <p className="text-xs text-muted">종합 점수</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CategoryDetail({ categoryScores }: { categoryScores: EvaluationReport["categoryScores"] }) {
   const [open, setOpen] = useState<string | null>(null);
 
@@ -69,24 +136,8 @@ export function ResultReport({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-panel-border bg-panel p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent-soft">
-              {report.verdictTag}
-            </span>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground">{report.verdictSummary}</p>
-            <p className="mt-2 text-xs text-muted">IR 자료 충실도 점수 (투자 판단 아님)</p>
-          </div>
-          <div className="text-right">
-            <div className="text-4xl font-bold text-accent-soft">
-              {report.totalScore}
-              <span className="text-lg text-muted">/100</span>
-            </div>
-            <p className="text-xs text-muted">종합 점수</p>
-          </div>
-        </div>
-      </div>
+      <Hero report={report} internalMode={internalMode} />
+      <ExtractionQualityBanner extractionQuality={report.extractionQuality} />
 
       <div className="rounded-lg border border-panel-border bg-panel p-5">
         <RadarScoreChart categoryScores={report.categoryScores} />
@@ -101,7 +152,18 @@ export function ResultReport({
       <CategoryDetail categoryScores={report.categoryScores} />
       <StorylineTimeline storyline={report.storyline} />
       <PeerResearchPlaceholder />
-      <ActionPlanList actionPlan={report.actionPlan} />
+      <ActionPlanList
+        actionPlan={report.actionPlan}
+        title="Action Plan (자료 보강)"
+        subtitle="점수 향상을 위한 다음 단계 · 스타트업 참고용 · 우선순위순"
+      />
+      {internalMode && report.investmentAttractiveness && report.investmentAttractiveness.reviewerNextSteps?.length > 0 && (
+        <ActionPlanList
+          actionPlan={report.investmentAttractiveness.reviewerNextSteps}
+          title="심사역 다음 액션"
+          subtitle="이 딜을 더 진행하기 위해 지금 할 수 있는 일 · 내부 전용"
+        />
+      )}
       <ReviewerQuestions questions={report.reviewerQuestions} />
 
       {!internalMode && (

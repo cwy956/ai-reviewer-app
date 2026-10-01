@@ -60,6 +60,37 @@ export interface InvestmentAttractivenessAssessment {
   criteria: InvestmentCriterionAssessment[];
   strongPoints: CitedPoint[];
   concerns: CitedPoint[];
+  /** Internal-only — what the reviewer (not the startup) should do next, e.g. "call the founder
+   * and ask about X". Distinct from actionPlan, which is deck-improvement advice for the startup. */
+  reviewerNextSteps: ActionItem[];
+}
+
+/**
+ * Computed programmatically from the PDF's per-page extracted text (never by the model) right
+ * after parsing, and attached to the report before it's saved — a deck where most pages failed
+ * text extraction (scanned images, broken fonts, etc.) gets scored the same way as a fully
+ * readable one otherwise, with no signal that the score itself rests on thin material.
+ */
+export interface ExtractionQuality {
+  pageCount: number;
+  emptyPageCount: number;
+  emptyPageRatio: number;
+  lowConfidence: boolean;
+}
+
+/** Peer companies found via live web search, for a VC comparing this deal against the market —
+ * run on demand (not on every evaluation) since it needs its own web-search round trip. */
+export interface PeerCompany {
+  name: string;
+  description: string;
+  comparisonNote: string;
+  url: string | null;
+}
+
+export interface PeerResearchResult {
+  summary: string;
+  peers: PeerCompany[];
+  researchedAt: string;
 }
 
 export interface EvaluationReport {
@@ -79,4 +110,8 @@ export interface EvaluationReport {
   storyline: StorylineStep[];
   actionPlan: ActionItem[];
   reviewerQuestions: string[];
+  /** Attached programmatically after parsing, not by the model — see ExtractionQuality. */
+  extractionQuality?: ExtractionQuality;
+  /** Filled in on demand via a separate web-search call, not part of the initial evaluation. */
+  peerResearch?: PeerResearchResult;
 }

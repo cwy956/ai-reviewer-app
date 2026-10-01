@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parsePdf } from "@/lib/parsePdf";
+import { parsePdf, assessExtractionQuality } from "@/lib/parsePdf";
 import { evaluateIr } from "@/lib/evaluate";
 import { getDomain } from "@/lib/domains";
 import { getPersona } from "@/lib/personas";
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     const parsed = await parsePdf(buffer);
 
     const report = await evaluateIr(persona, domain, parsed.markedText, dealInfo, "external");
+    report.extractionQuality = assessExtractionQuality(parsed);
 
     // Every real submission through this page goes into the internal IR list. Awaited (not
     // fire-and-forget) — a serverless function can be frozen/torn down right after the response

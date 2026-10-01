@@ -57,7 +57,7 @@ export function InvestmentAttractivenessPanel({
           </ul>
         </div>
         <div>
-          <h4 className="mb-2 text-sm font-medium text-warn">우려 요인</h4>
+          <h4 className="mb-2 text-sm font-medium text-bad">🚩 우려 요인 (투자 리스크)</h4>
           <ul className="space-y-2 text-sm">
             {investmentAttractiveness.concerns.map((s, i) => (
               <li key={i} className="leading-relaxed">

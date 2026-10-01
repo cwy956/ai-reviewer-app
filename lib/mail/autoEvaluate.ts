@@ -2,7 +2,7 @@ import { getDomain } from "../domains";
 import { listPersonas } from "../personas/store";
 import type { Persona } from "../personas/schema";
 import { fetchAttachmentContent, fetchFullMessage } from "./client";
-import { parsePdf } from "../parsePdf";
+import { parsePdf, assessExtractionQuality } from "../parsePdf";
 import { evaluateIr } from "../evaluate";
 import { listEvaluationsForMail, saveEvaluation } from "../evaluations/store";
 import type { ClassifiedMail } from "./classify";
@@ -57,6 +57,7 @@ async function autoEvaluateOne(mail: ClassifiedMail, defaultPersona: Persona): P
   const attachment = await fetchAttachmentContent(mail.msgNum, pdfIndex);
   const parsed = await parsePdf(attachment.content);
   const report = await evaluateIr(defaultPersona, domain, parsed.markedText, {}, "internal");
+  report.extractionQuality = assessExtractionQuality(parsed);
 
   await saveEvaluation({
     source: "mail",

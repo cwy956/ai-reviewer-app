@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchAttachmentContent } from "@/lib/mail/client";
-import { parsePdf } from "@/lib/parsePdf";
+import { parsePdf, assessExtractionQuality } from "@/lib/parsePdf";
 import { evaluateIr } from "@/lib/evaluate";
 import { getDomain } from "@/lib/domains";
 import { getPersona } from "@/lib/personas";
@@ -41,6 +41,7 @@ export async function POST(request: Request) {
     const parsed = await parsePdf(attachment.content);
     console.log(`[mail/evaluate] PDF 파싱 완료 (누적 ${Date.now() - t0}ms)`);
     const report = await evaluateIr(persona, domain, parsed.markedText, {}, "internal");
+    report.extractionQuality = assessExtractionQuality(parsed);
     console.log(`[mail/evaluate] 평가 전체 완료 (누적 ${Date.now() - t0}ms)`);
 
     const evaluation = await saveEvaluation({

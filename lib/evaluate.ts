@@ -17,6 +17,18 @@ const CITED_POINT_SCHEMA = {
   required: ["text", "pageRefs"],
 } as const;
 
+const ACTION_ITEM_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    title: { type: "string" },
+    detail: { type: "string" },
+    pageRefs: { type: "array", items: { type: "integer" } },
+    priority: { type: "string", enum: ["높음", "중간", "낮음"] },
+  },
+  required: ["title", "detail", "pageRefs", "priority"],
+} as const;
+
 const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
   type: "object",
   description:
@@ -46,8 +58,13 @@ const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
     },
     strongPoints: { type: "array", items: CITED_POINT_SCHEMA },
     concerns: { type: "array", items: CITED_POINT_SCHEMA },
+    reviewerNextSteps: {
+      type: "array",
+      description: "심사역이 직접 취할 다음 행동 3~5개 (자료 보강 조언이 아님 — actionPlan과 역할이 다름)",
+      items: ACTION_ITEM_SCHEMA,
+    },
   },
-  required: ["overallScore", "summary", "criteria", "strongPoints", "concerns"],
+  required: ["overallScore", "summary", "criteria", "strongPoints", "concerns", "reviewerNextSteps"],
 };
 
 const INVESTMENT_TOOL: Anthropic.Tool = {

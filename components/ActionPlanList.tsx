@@ -6,11 +6,19 @@ const PRIORITY_STYLES: Record<ActionItem["priority"], string> = {
   낮음: "bg-black/5 text-muted",
 };
 
-export function ActionPlanList({ actionPlan }: { actionPlan: ActionItem[] }) {
+export function ActionPlanList({
+  actionPlan,
+  title = "Action Plan",
+  subtitle = "점수 향상을 위한 다음 단계 · 우선순위순",
+}: {
+  actionPlan: ActionItem[];
+  title?: string;
+  subtitle?: string;
+}) {
   return (
     <div className="rounded-lg border border-panel-border bg-panel p-5">
-      <h3 className="font-semibold">Action Plan</h3>
-      <p className="mb-4 text-xs text-muted">점수 향상을 위한 다음 단계 · 우선순위순</p>
+      <h3 className="font-semibold">{title}</h3>
+      <p className="mb-4 text-xs text-muted">{subtitle}</p>
       <ul className="space-y-3">
         {actionPlan.map((item, i) => (
           <li key={i} className="rounded-md border border-panel-border p-3">

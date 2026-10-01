@@ -27,7 +27,7 @@ export function IndustryFitPanel({ industryFit }: { industryFit: IndustryFitAsse
           </ul>
         </div>
         <div>
-          <h4 className="mb-2 text-sm font-medium text-warn">의문이 남는 지점</h4>
+          <h4 className="mb-2 text-sm font-medium text-accent-soft">❓ 의문이 남는 지점 (산업 기준 대비)</h4>
           <ul className="space-y-2 text-sm">
             {industryFit.concerns.map((s, i) => (
               <li key={i} className="leading-relaxed">

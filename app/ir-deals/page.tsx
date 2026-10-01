@@ -66,8 +66,25 @@ function SourceTag({ source }: { source: "mail" | "platform" }) {
   );
 }
 
+type SortOption = "date" | "investment" | "completeness";
+
+function sortDeals(deals: Deal[], sortBy: SortOption): Deal[] {
+  const sorted = [...deals];
+  if (sortBy === "date") {
+    return sorted.sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+  }
+  const key = sortBy === "investment" ? "investmentAttractivenessScore" : "totalScore";
+  return sorted.sort((a, b) => {
+    const av = a.evaluation?.[key] ?? -1;
+    const bv = b.evaluation?.[key] ?? -1;
+    return bv - av;
+  });
+}
+
 export default function IrDealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [sortBy, setSortBy] = useState<SortOption>("date");
+  const [filterDomain, setFilterDomain] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -172,6 +189,9 @@ export default function IrDealsPage() {
     }
   }
 
+  const filteredDeals = filterDomain === "all" ? deals : deals.filter((d) => d.domainId === filterDomain);
+  const visibleDeals = sortDeals(filteredDeals, sortBy);
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-5xl px-4 py-12">
@@ -199,9 +219,41 @@ export default function IrDealsPage() {
             아직 들어온 IR이 없어요.
           </p>
         )}
+        {!loading && deals.length > 0 && visibleDeals.length === 0 && (
+          <p className="rounded-lg border border-dashed border-panel-border p-6 text-center text-sm text-muted">
+            이 영역에 해당하는 IR이 없어요.
+          </p>
+        )}
+
+        {!loading && deals.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
+            <select
+              value={filterDomain}
+              onChange={(e) => setFilterDomain(e.target.value)}
+              className="rounded-md border border-panel-border bg-panel px-3 py-1.5 text-sm outline-none focus:border-accent"
+            >
+              <option value="all">영역 전체</option>
+              {domains.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="rounded-md border border-panel-border bg-panel px-3 py-1.5 text-sm outline-none focus:border-accent"
+            >
+              <option value="date">최신순</option>
+              <option value="investment">투자매력도 높은순</option>
+              <option value="completeness">완성도 높은순</option>
+            </select>
+            <span className="text-xs text-muted">{visibleDeals.length}건</span>
+          </div>
+        )}
 
         <div className="space-y-2">
-          {deals.map((deal) => (
+          {visibleDeals.map((deal) => (
             <button
               key={deal.key}
               onClick={() => openDeal(deal)}
