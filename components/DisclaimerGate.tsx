@@ -16,6 +16,7 @@ export function DisclaimerGate({
         <li>다른 AI 심사역은 다르게 평가할 수 있습니다.</li>
         <li>실제 심사역은 다르게 평가할 수 있습니다.</li>
         <li>투자 결정의 근거로 사용할 수 없습니다.</li>
+        <li>제출된 자료는 안다아시아벤처스 심사역이 검토하며, 투자 검토를 진행하게 되는 경우에만 별도로 연락드립니다. 모든 제출 건에 회신을 드리지는 않습니다.</li>
       </ul>
       <label className="flex cursor-pointer items-start gap-2 rounded-md border border-panel-border p-3 text-sm">
         <input

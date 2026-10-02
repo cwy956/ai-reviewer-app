@@ -71,9 +71,10 @@ export default function Home() {
       <header className="mb-10 text-center">
         <h1 className="text-3xl font-bold text-accent-soft">AI 심사역 IR 평가</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          <strong className="text-foreground">AI 심사역</strong>이 IR을 평가합니다.
+          피치덱·사업계획서를 올려주세요. <strong className="text-foreground">안다아시아벤처스 심사역</strong>이 제출된 IR을
+          검토하고 있고, 좋은 기업이라고 판단되면 먼저 연락드립니다.
           <br />
-          피치덱·사업계획서를 올리면 한국 벤처투자 실무 기준으로 자료의 충실도를 짚어드려요.
+          제출과 동시에 AI 심사역이 한국 벤처투자 실무 기준으로 자료를 분석해 결과를 바로 보여드려요.
           <br />
           투자 자문이 아니라, 자료를 다듬는 참고용이에요.
         </p>
@@ -167,7 +168,6 @@ export default function Home() {
           </h2>
           <ResultReport
             report={report}
-            reviewerName="AI 심사역"
             reviewerAffiliation="안다아시아벤처스"
             onReset={resetAll}
           />

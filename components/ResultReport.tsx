@@ -13,7 +13,6 @@ import { ReviewerQuestions } from "./ReviewerQuestions";
 import { PeerResearchPlaceholder } from "./PeerResearchPlaceholder";
 import { PeerResearchPanel } from "./PeerResearchPanel";
 
-const EMAIL_GATE_SCORE = 80;
 
 function CompanySnapshotCard({ companySnapshot }: { companySnapshot?: string }) {
   if (!companySnapshot) return null;
@@ -131,7 +130,6 @@ function CategoryDetail({ categoryScores }: { categoryScores: EvaluationReport["
 
 export function ResultReport({
   report,
-  reviewerName,
   reviewerAffiliation,
   onReset,
   internalMode = false,
@@ -140,7 +138,6 @@ export function ResultReport({
   domainLabel,
 }: {
   report: EvaluationReport;
-  reviewerName: string;
   reviewerAffiliation: string;
   onReset: () => void;
   internalMode?: boolean;
@@ -149,8 +146,6 @@ export function ResultReport({
   dealTitle?: string;
   domainLabel?: string;
 }) {
-  const [emailSent, setEmailSent] = useState<string | null>(null);
-  const eligible = report.totalScore >= EMAIL_GATE_SCORE;
 
   return (
     <div className="space-y-5">
@@ -195,30 +190,11 @@ export function ResultReport({
       <ReviewerQuestions questions={report.reviewerQuestions} />
 
       {!internalMode && (
-        <div className="rounded-lg border border-panel-border bg-panel p-5">
-          {eligible ? (
-            <>
-              <button
-                onClick={() => setEmailSent(`${reviewerAffiliation} 투자팀에 전달 준비가 완료되었습니다.`)}
-                className="w-full rounded-lg bg-accent px-4 py-3 font-semibold text-white transition hover:bg-accent-soft"
-              >
-                안다아시아벤처스 투자팀에 메일로 IR 보내기
-              </button>
-              {emailSent && (
-                <p className="mt-2 text-center text-sm text-good">
-                  {emailSent} (데모 버전에서는 실제로 발송되지 않습니다.)
-                </p>
-              )}
-            </>
-          ) : (
-            <div className="rounded-md border border-warn/30 bg-warn/10 p-4 text-sm text-warn">
-              <p className="font-medium">{EMAIL_GATE_SCORE}점을 넘겨야만 해당 심사역에게 메일을 보낼 수 있어요.</p>
-              <p className="mt-1 text-warn/80">
-                현재 종합 점수는 {report.totalScore}점이에요 (기준 {EMAIL_GATE_SCORE}점). Action Plan을 수행해서 점수를
-                올려보세요!
-              </p>
-            </div>
-          )}
+        <div className="rounded-lg border border-accent/40 bg-accent/5 p-5 text-center">
+          <p className="font-semibold text-accent-soft">제출이 완료되었어요</p>
+          <p className="mt-1 text-sm text-muted">
+            {reviewerAffiliation} 심사역이 제출하신 IR을 검토하고 있어요. 좋은 기업이라고 판단되면 먼저 연락드릴게요.
+          </p>
         </div>
       )}
 

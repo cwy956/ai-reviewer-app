@@ -105,7 +105,7 @@ export function UploadPanel({
       </button>
 
       <p className="text-center text-xs text-muted">
-        업로드하신 IR은 평가 직후 자동 폐기되며, 어떠한 형태로도 저장·재사용되지 않습니다.
+        업로드하신 IR 원본 파일은 저장되지 않으며, AI 평가 결과만 안다아시아벤처스 심사역 검토를 위해 전달됩니다.
       </p>
     </div>
   );

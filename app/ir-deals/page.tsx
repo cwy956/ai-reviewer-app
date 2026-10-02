@@ -98,7 +98,6 @@ export default function IrDealsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [latestReport, setLatestReport] = useState<EvaluationReport | null>(null);
   const [currentEvaluationId, setCurrentEvaluationId] = useState<number | null>(null);
-  const [reportPersonaName, setReportPersonaName] = useState("AI 심사역");
   const [showEvalForm, setShowEvalForm] = useState(false);
 
   const [formDomainId, setFormDomainId] = useState("");
@@ -157,7 +156,6 @@ export default function IrDealsPage() {
     setPdfPreviewFromBase64(undefined);
     setLatestReport(null);
     setCurrentEvaluationId(null);
-    setReportPersonaName("AI 심사역");
     setShowEvalForm(deal.source === "mail" && !deal.evaluation);
     setEvalError(null);
     setFormDomainId(deal.domainId ?? "");
@@ -171,7 +169,6 @@ export default function IrDealsPage() {
         if (!res.ok) throw new Error(data.error || "제출 내역을 불러오지 못했습니다.");
         setLatestReport(data.submission.report);
         setCurrentEvaluationId(data.submission.id);
-        setReportPersonaName(data.submission.personaName);
         setFormDomainId(data.submission.domainId);
         return;
       }
@@ -203,7 +200,6 @@ export default function IrDealsPage() {
       if (latest) {
         setLatestReport(latest.report);
         setCurrentEvaluationId(latest.id);
-        setReportPersonaName(latest.personaName);
         setFormDomainId(latest.domainId);
       }
     } catch (err) {
@@ -237,7 +233,6 @@ export default function IrDealsPage() {
       if (!res.ok) throw new Error(data.error || "평가에 실패했습니다.");
       setLatestReport(data.evaluation.report);
       setCurrentEvaluationId(data.evaluation.id);
-      setReportPersonaName(data.evaluation.personaName);
       setShowEvalForm(false);
       loadDeals();
     } catch (err) {
@@ -441,7 +436,6 @@ export default function IrDealsPage() {
                       )}
                       <ResultReport
                         report={latestReport}
-                        reviewerName={reportPersonaName}
                         reviewerAffiliation="안다아시아벤처스"
                         onReset={closeModal}
                         internalMode
