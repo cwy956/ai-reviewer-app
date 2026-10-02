@@ -5,6 +5,8 @@ export interface DealInfo {
   stage?: string;
   preValuationEok?: number;
   askAmountEok?: number;
+  /** 스타트업이 고른 세부 영역 라벨 (선택). */
+  subDomain?: string;
 }
 
 function renderPersonaSection(persona: Persona): string {
@@ -47,7 +49,12 @@ function renderDomainChecklist(persona: Persona, domain: Domain): string {
     ? `\n\n[이 영역에서 이 심사역만의 추가 판단 지침]\n${criteria.freeform}`
     : "";
 
-  return `평가 영역: ${domain.label}\n\n${byCategory.join("\n\n")}${freeform}\n\n⭐ 표시된 체크포인트는 이 심사역이 특히 중요하게 보는 항목이므로, 해당 항목이 미흡할 경우 점수와 보강 포인트에 더 크게 반영하세요.`;
+  const subDomainBlock =
+    domain.subDomains.length > 0
+      ? `\n세부 영역 후보: ${domain.subDomains.map((s) => s.label).join(" / ")}\n(IR 내용에 가장 가까운 세부 영역 하나를 subDomain에 적고, 평가 때 그 세부 영역의 통상적 기준·경쟁 구도를 반영하세요.)`
+      : "";
+
+  return `평가 영역: ${domain.label}${subDomainBlock}\n\n${byCategory.join("\n\n")}${freeform}\n\n⭐ 표시된 체크포인트는 이 심사역이 특히 중요하게 보는 항목이므로, 해당 항목이 미흡할 경우 점수와 보강 포인트에 더 크게 반영하세요.`;
 }
 
 function renderIndustryFitInstructions(domain: Domain): string {
@@ -113,6 +120,7 @@ ${mode === "internal" ? `\n${renderInvestmentAttractivenessInstructions()}` : ""
 export function buildUserMessage(markedText: string, dealInfo: DealInfo): string {
   const dealInfoLines = [
     dealInfo.stage ? `- 스타트업이 밝힌 투자단계: ${dealInfo.stage}` : null,
+    dealInfo.subDomain ? `- 스타트업이 고른 세부 영역: ${dealInfo.subDomain}` : null,
     dealInfo.preValuationEok ? `- pre-밸류에이션: 약 ${dealInfo.preValuationEok}억 원` : null,
     dealInfo.askAmountEok ? `- 희망 투자금액: 약 ${dealInfo.askAmountEok}억 원` : null,
   ].filter(Boolean);

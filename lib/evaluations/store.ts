@@ -9,6 +9,7 @@ export interface IrEvaluationSummary {
   msgNum: number | null;
   companyName: string | null;
   companyTagline: string | null;
+  subDomain: string | null;
   domainId: string;
   personaId: string;
   personaName: string;
@@ -31,6 +32,7 @@ function rowToSummary(row: Record<string, unknown>): IrEvaluationSummary {
     msgNum: (row.msg_num as number | null) ?? null,
     companyName: (row.company_name as string | null) ?? null,
     companyTagline: report.companyTagline || null,
+    subDomain: report.subDomain || null,
     domainId: row.domain_id as string,
     personaId: row.persona_id as string,
     personaName: row.persona_name as string,

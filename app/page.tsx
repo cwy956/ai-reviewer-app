@@ -17,6 +17,7 @@ type Step = 1 | 2 | 3 | 4;
 export default function Home() {
   const [step, setStep] = useState<Step>(1);
   const [domainId, setDomainId] = useState<string | null>(null);
+  const [subDomainId, setSubDomainId] = useState<string | null>(null);
   const [dealInfo, setDealInfo] = useState<DealInfoValue>({});
   const [agreed, setAgreed] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -34,6 +35,7 @@ export default function Home() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("domainId", domainId);
+      if (subDomainId) formData.append("subDomainId", subDomainId);
       formData.append("personaId", DEFAULT_PERSONA_ID);
       if (dealInfo.companyName) formData.append("companyName", dealInfo.companyName);
       if (dealInfo.stage) formData.append("stage", dealInfo.stage);
@@ -57,6 +59,7 @@ export default function Home() {
   function resetAll() {
     setStep(1);
     setDomainId(null);
+    setSubDomainId(null);
     setDealInfo({});
     setAgreed(false);
     setFile(null);
@@ -106,7 +109,14 @@ export default function Home() {
             <span className="mr-2 text-accent-soft">01</span>영역 선택
           </h2>
           <p className="text-sm text-muted">평가 기준이 영역별로 달라지므로, IR이 다루는 기술영역을 골라주세요.</p>
-          <DomainPicker value={domainId} onChange={setDomainId} />
+          <DomainPicker
+            value={domainId}
+            subValue={subDomainId}
+            onChange={(d, s) => {
+              setDomainId(d);
+              setSubDomainId(s);
+            }}
+          />
           <button
             disabled={!domainId}
             onClick={() => setStep(2)}

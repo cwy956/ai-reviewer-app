@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { parsePdf, assessExtractionQuality } from "@/lib/parsePdf";
 import { evaluateIr } from "@/lib/evaluate";
-import { getDomain } from "@/lib/domains";
+import { getDomain, getSubDomain } from "@/lib/domains";
 import { getPersona } from "@/lib/personas";
 import { saveEvaluation } from "@/lib/evaluations/store";
 import type { DealInfo } from "@/lib/buildPrompt";
@@ -38,7 +38,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "알 수 없는 심사역입니다." }, { status: 400 });
     }
 
+    const subDomainId = formData.get("subDomainId");
+    const subDomain = typeof subDomainId === "string" && subDomainId ? getSubDomain(domainId, subDomainId) : undefined;
+
     const dealInfo: DealInfo = {
+      subDomain: subDomain?.label,
       stage: (formData.get("stage") as string) || undefined,
       preValuationEok: numberOrUndefined(formData.get("preValuationEok")),
       askAmountEok: numberOrUndefined(formData.get("askAmountEok")),

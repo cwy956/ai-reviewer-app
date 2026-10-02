@@ -103,6 +103,8 @@ export interface EvaluationReport {
   companyName?: string;
   /** ~10~15자 짧은 한 줄 — 딜 목록에서 "회사명 | 태그라인" 형태로 쓰임. */
   companyTagline?: string;
+  /** 영역 안에서 이 회사가 속한 세부 영역(예: "전력반도체(SiC·GaN)"). 모델이 자료를 보고 고름. */
+  subDomain?: string;
   /** The very first thing a reviewer reads — 2~3 plain-language sentences on what this company
    * actually does, before any scoring. Optional only for reports saved before this field existed. */
   companySnapshot?: string;

@@ -85,6 +85,11 @@ function buildReportTool(): Anthropic.Tool {
         description:
           "IR 자료에 명시된 회사/브랜드의 실제 이름 (이메일 제목이 아니라 자료 본문·표지에서 찾을 것). 자료 어디에도 이름이 없으면 빈 문자열로 두세요.",
       },
+      subDomain: {
+        type: "string",
+        description:
+          "시스템 프롬프트의 '세부 영역 후보' 중 이 회사에 가장 가까운 것 하나(후보 라벨 그대로). 후보가 없거나 맞는 게 없으면 빈 문자열.",
+      },
       companyTagline: {
         type: "string",
         description:
@@ -221,6 +226,7 @@ function buildReportTool(): Anthropic.Tool {
   const required = [
     "companyName",
     "companyTagline",
+    "subDomain",
     "companySnapshot",
     "totalScore",
     "verdictTag",

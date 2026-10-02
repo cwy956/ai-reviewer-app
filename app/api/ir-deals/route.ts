@@ -6,6 +6,10 @@ import { getDomain } from "@/lib/domains";
 /** Prefer the company name (extracted from the IR material itself) over a raw email subject or
  * "기업명 미입력" placeholder — a subject line like "투자문의드립니다" tells a skimming reviewer
  * nothing about which deal it is. */
+function buildDomainLabel(domainLabel: string, subDomain: string | null): string {
+  return subDomain ? `${domainLabel} › ${subDomain}` : domainLabel;
+}
+
 function buildDealTitle(companyName: string | null, companyTagline: string | null, fallback: string): string {
   if (!companyName) return fallback;
   return companyTagline ? `${companyName} | ${companyTagline}` : companyName;
@@ -59,7 +63,7 @@ export async function GET() {
         subtitle: m.from_address as string,
         date: (m.mail_date as string) ?? (m.processed_at as string),
         domainId,
-        domainLabel: domain?.label ?? "미분류",
+        domainLabel: buildDomainLabel(domain?.label ?? "미분류", evaluation?.subDomain ?? null),
         evaluation: evaluation
           ? {
               totalScore: evaluation.totalScore,
@@ -83,7 +87,7 @@ export async function GET() {
         subtitle: s.attachmentFilename,
         date: s.evaluatedAt,
         domainId: s.domainId,
-        domainLabel: domain?.label ?? "미분류",
+        domainLabel: buildDomainLabel(domain?.label ?? "미분류", s.subDomain),
         evaluation: {
           totalScore: s.totalScore,
           investmentAttractivenessScore: s.investmentAttractivenessScore,

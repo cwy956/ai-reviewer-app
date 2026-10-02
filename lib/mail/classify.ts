@@ -79,7 +79,7 @@ export const SYSTEM_PROMPT = `당신은 벤처캐피탈 심사역의 공용 이�
 category가 ir인 경우에만 priority를 의미 있게 판단하세요 (제목·발신자·본문 스니펫으로 볼 때 실제 검토할 만한 딜로 보이면 "높음"). 그 외 카테고리는 priority를 "낮음"으로 두세요.
 
 category가 ir인 경우, 이 스타트업이 속한 업종을 아래 도메인 중 하나로 판별해 domainId에 넣으세요 (제목·발신자·본문 스니펫에서 업종을 특정할 근거가 부족하면 "etc"):
-${domains.map((d) => `- ${d.id}: ${d.label}`).join("\n")}
+${domains.map((d) => `- ${d.id}: ${d.label}${d.subDomains.length ? ` (${d.subDomains.map((s) => s.label).join(", ")})` : ""}`).join("\n")}
 category가 ir이 아니면 domainId는 반드시 null로 두세요.
 
 반드시 submit_classification 도구(classify_mails)를 호출해 결과를 제출하세요. 입력된 모든 msgNum에 대해 결과를 채워야 합니다.`;
