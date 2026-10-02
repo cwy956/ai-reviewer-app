@@ -11,15 +11,21 @@ interface FullMail {
   attachments: { index: number; filename: string; size: number }[];
 }
 
+interface DealLite {
+  source: "mail" | "platform";
+  key: string;
+  title: string;
+  domainLabel: string;
+  evaluation: { totalScore: number; investmentAttractivenessScore: number | null } | null;
+}
+
 interface DashboardData {
   summary: {
-    totalInMailbox: number | null;
-    classifiedCount: number;
     newIRThisWeek: number;
-    sendSuccess7d: number;
+    investmentThisWeek: number;
+    adminThisWeek: number;
     sendFailed7d: number;
     lastCheckedAt: string | null;
-    lastAlertedAt: string | null;
   };
   gaps: {
     uncoveredDomains: { domainId: string; label: string; irCount: number }[];
@@ -87,6 +93,7 @@ function SectionCard({ title, tag, children }: { title: string; tag?: string; ch
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [deals, setDeals] = useState<DealLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,11 +104,11 @@ export default function DashboardPage() {
   const [fullMailError, setFullMailError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/dashboard")
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.error) throw new Error(json.error);
-        setData(json);
+    Promise.all([fetch("/api/dashboard").then((r) => r.json()), fetch("/api/ir-deals").then((r) => r.json())])
+      .then(([dash, irDeals]) => {
+        if (dash.error) throw new Error(dash.error);
+        setData(dash);
+        setDeals(irDeals.deals ?? []);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "불러오기에 실패했습니다."))
       .finally(() => setLoading(false));
@@ -124,9 +131,11 @@ export default function DashboardPage() {
     }
   }
 
-  const hasGaps =
-    !!data &&
-    (data.gaps.uncoveredDomains.length > 0 || data.gaps.personasWithoutEmail.length > 0 || data.gaps.recentFailed.length > 0);
+  const pendingDeals = deals.filter((d) => d.source === "mail" && !d.evaluation);
+  const topDeals = deals
+    .filter((d) => d.evaluation?.investmentAttractivenessScore != null)
+    .sort((a, b) => (b.evaluation!.investmentAttractivenessScore ?? 0) - (a.evaluation!.investmentAttractivenessScore ?? 0))
+    .slice(0, 5);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -149,63 +158,86 @@ export default function DashboardPage() {
             <>
               {/* 요약 타일 */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                <StatTile label="전체 메일함" value={data.summary.totalInMailbox ?? "-"} />
-                <StatTile label="분류 완료" value={data.summary.classifiedCount} />
                 <StatTile label="이번 주 신규 IR" value={data.summary.newIRThisWeek} tone="good" />
-                <StatTile label="발송 성공 (7일)" value={data.summary.sendSuccess7d} tone="good" />
+                <StatTile label="이번 주 투자팀 수신" value={data.summary.investmentThisWeek} />
+                <StatTile label="이번 주 관리팀 수신" value={data.summary.adminThisWeek} />
+                <StatTile label="평가 안 된 IR" value={pendingDeals.length} tone={pendingDeals.length > 0 ? "warn" : undefined} />
                 <StatTile
-                  label="발송 실패 (7일)"
+                  label="전달 실패 (7일)"
                   value={data.summary.sendFailed7d}
                   tone={data.summary.sendFailed7d > 0 ? "bad" : undefined}
                 />
               </div>
 
-              {/* 놓치고 있는 것 */}
-              {hasGaps && (
-                <div className="rounded-xl border border-warn/30 bg-panel p-5 shadow-sm">
-                  <div className="mb-3 flex items-center gap-2">
-                    <h2 className="font-semibold text-foreground">놓치고 있는 것</h2>
-                    <Tag tone="warn">확인 필요</Tag>
-                  </div>
-                  <div className="grid gap-5 md:grid-cols-3">
-                    {data.gaps.uncoveredDomains.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-xs font-medium text-muted">담당 심사역 없는 업종</p>
-                        <ul className="space-y-1.5 text-sm">
-                          {data.gaps.uncoveredDomains.map((d) => (
-                            <li key={d.domainId} className="flex items-center justify-between gap-2">
-                              <span>{d.label}</span>
-                              <Tag tone="warn">IR {d.irCount}건</Tag>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {data.gaps.personasWithoutEmail.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-xs font-medium text-muted">이메일 미등록 심사역</p>
-                        <ul className="space-y-1.5 text-sm">
-                          {data.gaps.personasWithoutEmail.map((p) => (
-                            <li key={p.id}>{p.name}</li>
-                          ))}
-                        </ul>
-                      </div>
+              {/* 처리할 일 */}
+              <SectionCard title="처리할 일">
+                {pendingDeals.length === 0 &&
+                data.gaps.uncoveredDomains.length === 0 &&
+                data.gaps.personasWithoutEmail.length === 0 &&
+                data.gaps.recentFailed.length === 0 ? (
+                  <p className="text-sm text-good">지금 처리할 일이 없어요.</p>
+                ) : (
+                  <ul className="space-y-3 text-sm">
+                    {pendingDeals.length > 0 && (
+                      <li className="flex items-center justify-between gap-3">
+                        <span>평가 안 된 IR {pendingDeals.length}건 — 평가가 필요하거나 PDF가 없는 건이에요</span>
+                        <a href="/ir-deals?pending=1" className="shrink-0 text-xs font-medium text-accent-soft hover:underline">
+                          보러 가기
+                        </a>
+                      </li>
                     )}
                     {data.gaps.recentFailed.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-xs font-medium text-muted">최근 발송 실패</p>
-                        <ul className="space-y-1.5 text-sm">
-                          {data.gaps.recentFailed.slice(0, 5).map((f, i) => (
-                            <li key={i} className="truncate" title={f.error ?? undefined}>
-                              {f.subject} → {f.recipientEmail}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                      <li>
+                        <p>알림 메일 전달 실패 {data.gaps.recentFailed.length}건</p>
+                        <p className="mt-1 truncate text-xs text-muted">
+                          {data.gaps.recentFailed.slice(0, 3).map((f) => `${f.subject} → ${f.recipientEmail}`).join(" / ")}
+                        </p>
+                      </li>
                     )}
-                  </div>
-                </div>
-              )}
+                    {data.gaps.uncoveredDomains.length > 0 && (
+                      <li>
+                        <p>담당 심사역이 없는 영역의 IR (관리팀이 대신 받는 중)</p>
+                        <p className="mt-1 text-xs text-muted">
+                          {data.gaps.uncoveredDomains.map((d) => `${d.label} ${d.irCount}건`).join(" · ")}
+                        </p>
+                      </li>
+                    )}
+                    {data.gaps.personasWithoutEmail.length > 0 && (
+                      <li>
+                        <p>이메일이 등록되지 않은 심사역</p>
+                        <p className="mt-1 text-xs text-muted">{data.gaps.personasWithoutEmail.map((p) => p.name).join(", ")}</p>
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </SectionCard>
+
+              {/* 투자 매력도 상위 딜 */}
+              <SectionCard title="투자 매력도 상위 딜">
+                {topDeals.length === 0 ? (
+                  <p className="text-sm text-muted">아직 평가된 딜이 없어요.</p>
+                ) : (
+                  <ul className="space-y-1 text-sm">
+                    {topDeals.map((d, i) => (
+                      <li key={d.key}>
+                        <a
+                          href="/ir-deals?sort=investment"
+                          className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-accent-tint/40"
+                        >
+                          <span className="min-w-0">
+                            <span className="mr-2 text-xs text-muted">{i + 1}</span>
+                            <span className="truncate">{d.title}</span>
+                            <span className="ml-2 text-xs text-muted">{d.domainLabel}</span>
+                          </span>
+                          <span className="shrink-0 text-xs text-muted">
+                            투자매력도 <span className="font-semibold text-foreground">{d.evaluation!.investmentAttractivenessScore}</span>
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </SectionCard>
 
               {/* 이메일 수신 이력 */}
               <SectionCard title="이메일 수신 이력">

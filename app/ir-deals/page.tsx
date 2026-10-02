@@ -86,7 +86,15 @@ function sortDeals(deals: Deal[], sortBy: SortOption): Deal[] {
 
 export default function IrDealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [sortBy, setSortBy] = useState<SortOption>("date");
+  // 대시보드에서 /ir-deals?pending=1, ?sort=investment 로 들어오면 그 상태로 시작
+  const [sortBy, setSortBy] = useState<SortOption>(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("sort") === "investment"
+      ? "investment"
+      : "date"
+  );
+  const [pendingOnly, setPendingOnly] = useState<boolean>(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("pending") === "1"
+  );
   const [filterDomain, setFilterDomain] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -242,7 +250,9 @@ export default function IrDealsPage() {
     }
   }
 
-  const filteredDeals = filterDomain === "all" ? deals : deals.filter((d) => d.domainId === filterDomain);
+  const filteredDeals = deals.filter(
+    (d) => (filterDomain === "all" || d.domainId === filterDomain) && (!pendingOnly || (d.source === "mail" && !d.evaluation))
+  );
   const visibleDeals = sortDeals(filteredDeals, sortBy);
 
   return (
@@ -301,6 +311,10 @@ export default function IrDealsPage() {
               <option value="investment">투자매력도 높은순</option>
               <option value="completeness">완성도 높은순</option>
             </select>
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted">
+              <input type="checkbox" checked={pendingOnly} onChange={(e) => setPendingOnly(e.target.checked)} />
+              평가 안 된 것만
+            </label>
             <span className="text-xs text-muted">{visibleDeals.length}건</span>
           </div>
         )}

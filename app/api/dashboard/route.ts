@@ -75,18 +75,21 @@ export async function GET() {
   const now = Date.now();
   const isWithin7d = (iso: string) => now - new Date(iso).getTime() <= SEVEN_DAYS_MS;
 
-  // --- 요약 카드 ---
+  // --- 요약 카드 (받은 날짜 기준 — processed_at은 백로그 일괄처리 시각이라 "이번 주"가 왜곡됨) ---
   let newIRThisWeek = 0;
+  let investmentThisWeek = 0;
+  let adminThisWeek = 0;
   for (const m of mails) {
-    if (m.category === "ir" && isWithin7d(m.processed_at)) newIRThisWeek++;
+    if (!isWithin7d(m.mail_date ?? m.processed_at)) continue;
+    if (m.category === "ir") newIRThisWeek++;
+    const team = teamOf(m.category);
+    if (team === "investment") investmentThisWeek++;
+    else if (team === "admin") adminThisWeek++;
   }
 
-  let sendSuccess7d = 0;
   let sendFailed7d = 0;
   for (const l of logs) {
-    if (!isWithin7d(l.sent_at)) continue;
-    if (l.status === "sent") sendSuccess7d++;
-    else sendFailed7d++;
+    if (isWithin7d(l.sent_at) && l.status === "failed") sendFailed7d++;
   }
 
   // --- 담당자 커버리지 갭 ---
@@ -146,13 +149,11 @@ export async function GET() {
 
   return NextResponse.json({
     summary: {
-      totalInMailbox: metaRes.data?.total_in_mailbox ?? null,
-      classifiedCount: mails.length,
       newIRThisWeek,
-      sendSuccess7d,
+      investmentThisWeek,
+      adminThisWeek,
       sendFailed7d,
       lastCheckedAt: watchRes.data?.last_checked_at ?? null,
-      lastAlertedAt: watchRes.data?.last_alerted_at ?? null,
     },
     gaps: {
       uncoveredDomains,
