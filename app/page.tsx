@@ -71,12 +71,9 @@ export default function Home() {
       <header className="mb-10 text-center">
         <h1 className="text-3xl font-bold text-accent-soft">AI 심사역 IR 평가</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          피치덱·사업계획서를 올려주세요. <strong className="text-foreground">안다아시아벤처스 심사역</strong>이 제출된 IR을
-          검토하고 있고, 좋은 기업이라고 판단되면 먼저 연락드립니다.
+          IR을 올려주세요. <strong className="text-foreground">심사역</strong>이 검토하고, 좋은 기업이면 먼저 연락드립니다.
           <br />
-          제출과 동시에 AI 심사역이 한국 벤처투자 실무 기준으로 자료를 분석해 결과를 바로 보여드려요.
-          <br />
-          투자 자문이 아니라, 자료를 다듬는 참고용이에요.
+          AI 분석 결과는 바로 확인할 수 있어요. (투자 자문이 아닌 참고용)
         </p>
         <div className="mt-4 flex items-center justify-center gap-4 text-xs">
           <a href="/internal-login" className="text-muted underline hover:text-accent-soft">
