@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DistributionChart } from "@/components/dashboard/DistributionChart";
 
 interface FullMail {
   msgNum: number;
@@ -27,13 +26,15 @@ interface DashboardData {
     personasWithoutEmail: { id: string; name: string }[];
     recentFailed: { msgNum: number; subject: string; recipientEmail: string; sentAt: string; error: string | null }[];
   };
-  categoryDistribution: { category: string; label: string; count: number }[];
-  domainDistribution: { domainId: string; label: string; count: number }[];
-  reviewerTable: { id: string; name: string; hasEmail: boolean; domainCount: number; receivedCount: number }[];
-  feed: (
-    | { type: "classified"; at: string; msgNum: number; subject: string; category: string }
-    | { type: "sent" | "failed"; at: string; msgNum: number; subject: string; recipientEmail: string }
-  )[];
+  mailHistory: {
+    msgNum: number;
+    subject: string;
+    from: string;
+    receivedAt: string;
+    team: "investment" | "admin" | null;
+    categoryLabel: string;
+    deliveries: { name: string; status: "sent" | "failed" }[];
+  }[];
 }
 
 function formatDateTime(iso: string | null): string {
@@ -89,6 +90,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [historyTab, setHistoryTab] = useState<"all" | "investment" | "admin">("all");
   const [selectedMsgNum, setSelectedMsgNum] = useState<number | null>(null);
   const [fullMailByMsgNum, setFullMailByMsgNum] = useState<Record<number, FullMail>>({});
   const [fullMailLoading, setFullMailLoading] = useState<number | null>(null);
@@ -205,72 +207,63 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* 분포 차트 */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <SectionCard title="카테고리별 분포">
-                  <DistributionChart data={data.categoryDistribution.map((c) => ({ label: c.label, count: c.count }))} />
-                </SectionCard>
-                <SectionCard title="업종별 IR 유입량">
-                  {data.domainDistribution.length > 0 ? (
-                    <DistributionChart data={data.domainDistribution.map((d) => ({ label: d.label, count: d.count }))} />
-                  ) : (
-                    <p className="text-sm text-muted">아직 업종이 판별된 IR 메일이 없어요.</p>
-                  )}
-                </SectionCard>
-              </div>
-
-              {/* 심사역별 현황 */}
-              <SectionCard title="심사역별 현황">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="text-xs text-muted">
-                      <tr className="border-b border-panel-border">
-                        <th className="pb-2 pr-4 font-medium">이름</th>
-                        <th className="pb-2 pr-4 font-medium">이메일 등록</th>
-                        <th className="pb-2 pr-4 font-medium">담당 도메인 수</th>
-                        <th className="pb-2 font-medium">받은 메일 수</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.reviewerTable.map((r) => (
-                        <tr key={r.id} className="border-b border-panel-border/60 last:border-0">
-                          <td className="py-2.5 pr-4">{r.name}</td>
-                          <td className="py-2.5 pr-4">
-                            {r.hasEmail ? <Tag tone="good">등록됨</Tag> : <Tag tone="bad">미등록</Tag>}
-                          </td>
-                          <td className="py-2.5 pr-4">{r.domainCount}</td>
-                          <td className="py-2.5">{r.receivedCount}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </SectionCard>
-
-              {/* 최근 활동 피드 */}
-              <SectionCard title="최근 활동">
-                <ul className="max-h-96 space-y-1 overflow-y-auto text-sm">
-                  {data.feed.map((item, i) => (
-                    <li key={i} className="border-b border-panel-border/60 last:border-0">
-                      <button
-                        onClick={() => openMail(item.msgNum)}
-                        className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-accent-tint/40"
-                      >
-                        <span className="flex min-w-0 items-center gap-2">
-                          {item.type === "classified" &&
-                            (item.category === "ir" ? <Tag>투자</Tag> : <Tag tone="warn">관리</Tag>)}
-                          {item.type === "sent" && <Tag tone="good">발송</Tag>}
-                          {item.type === "failed" && <Tag tone="bad">실패</Tag>}
-                          <span className="truncate transition-colors group-hover:text-accent-soft group-hover:underline">
-                            {item.subject}
-                            {item.type !== "classified" && <span className="text-muted"> → {item.recipientEmail}</span>}
-                          </span>
-                        </span>
-                        <span className="shrink-0 text-xs text-muted">{formatDateTime(item.at)}</span>
-                      </button>
-                    </li>
+              {/* 이메일 수신 이력 */}
+              <SectionCard title="이메일 수신 이력">
+                <div className="mb-3 flex gap-2 text-xs">
+                  {(
+                    [
+                      ["all", "전체", data.mailHistory.length],
+                      ["investment", "투자", data.mailHistory.filter((m) => m.team === "investment").length],
+                      ["admin", "관리", data.mailHistory.filter((m) => m.team === "admin").length],
+                    ] as const
+                  ).map(([key, label, count]) => (
+                    <button
+                      key={key}
+                      onClick={() => setHistoryTab(key)}
+                      className={`rounded-full px-3 py-1.5 font-medium transition ${
+                        historyTab === key ? "bg-accent text-white" : "bg-black/5 text-muted hover:text-foreground"
+                      }`}
+                    >
+                      {label} {count}
+                    </button>
                   ))}
-                  {data.feed.length === 0 && <li className="py-2 text-muted">아직 활동 기록이 없어요.</li>}
+                </div>
+                <ul className="max-h-[32rem] space-y-1 overflow-y-auto text-sm">
+                  {data.mailHistory
+                    .filter((m) => historyTab === "all" || m.team === historyTab)
+                    .map((m) => (
+                      <li key={m.msgNum} className="border-b border-panel-border/60 last:border-0">
+                        <button
+                          onClick={() => openMail(m.msgNum)}
+                          className="group flex w-full cursor-pointer items-start justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-accent-tint/40"
+                        >
+                          <span className="flex min-w-0 items-start gap-2">
+                            <span className="mt-0.5 shrink-0">
+                              {m.team === "investment" && <Tag>투자</Tag>}
+                              {m.team === "admin" && <Tag tone="warn">관리</Tag>}
+                              {m.team === null && <Tag tone="bad">스팸</Tag>}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block truncate transition-colors group-hover:text-accent-soft group-hover:underline">
+                                {m.subject}
+                              </span>
+                              <span className="block truncate text-xs text-muted">
+                                {m.from} · {m.categoryLabel}
+                                {m.deliveries.length > 0 && (
+                                  <>
+                                    {" "}
+                                    · 전달{" "}
+                                    {m.deliveries.map((d) => (d.status === "sent" ? d.name : `${d.name}(실패)`)).join(", ")}
+                                  </>
+                                )}
+                              </span>
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-xs text-muted">{formatDateTime(m.receivedAt)}</span>
+                        </button>
+                      </li>
+                    ))}
+                  {data.mailHistory.length === 0 && <li className="py-2 text-muted">아직 수신 기록이 없어요.</li>}
                 </ul>
               </SectionCard>
             </>

@@ -2,17 +2,26 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { MailSummary } from "./client";
 import { domains } from "../domains";
 
-export type MailCategory = "ir" | "gov_program" | "biz_proposal" | "spam" | "etc";
+export type MailCategory = "ir" | "invest_other" | "gov_program" | "biz_proposal" | "spam" | "etc";
 
 export const CATEGORY_LABELS: Record<MailCategory, string> = {
   ir: "IR·투자관련",
+  invest_other: "투자 관련(행사·LP·출자)",
   gov_program: "정부지원사업·공고",
   biz_proposal: "협업·영업 제안",
   spam: "스팸·광고",
   etc: "기타",
 };
 
-export const CATEGORY_ORDER: MailCategory[] = ["ir", "gov_program", "biz_proposal", "etc", "spam"];
+export const CATEGORY_ORDER: MailCategory[] = ["ir", "invest_other", "gov_program", "biz_proposal", "etc", "spam"];
+
+/** 메일이 어느 팀으로 가는지 — 투자팀(심사역)이 직접 봐야 하는 것 vs 관리팀이 처리할 것. 스팸은 어디로도 안 감. */
+export type MailTeam = "investment" | "admin";
+export function teamOf(category: MailCategory): MailTeam | null {
+  if (category === "ir" || category === "invest_other") return "investment";
+  if (category === "spam") return null;
+  return "admin";
+}
 
 const DOMAIN_IDS = domains.map((d) => d.id);
 
@@ -42,7 +51,7 @@ export const CLASSIFY_TOOL: Anthropic.Tool = {
           type: "object",
           properties: {
             msgNum: { type: "integer" },
-            category: { type: "string", enum: ["ir", "gov_program", "biz_proposal", "spam", "etc"] },
+            category: { type: "string", enum: ["ir", "invest_other", "gov_program", "biz_proposal", "spam", "etc"] },
             reason: { type: "string", description: "한 줄 분류 근거" },
             priority: {
               type: "string",
@@ -65,16 +74,28 @@ export const CLASSIFY_TOOL: Anthropic.Tool = {
 };
 
 export const SYSTEM_PROMPT = `당신은 벤처캐피탈 심사역의 공용 이메일함을 정리하는 어시스턴트입니다.
-각 메일을 다음 5개 카테고리 중 하나로 분류하세요.
+각 메일을 다음 6개 카테고리 중 하나로 분류하세요. 핵심 기준은 "투자팀(심사역)이 직접 봐야 하는가, 관리팀이 처리하면 되는가"입니다.
 
-- ir: 특정 스타트업 한 곳이 자사의 사업계획서·피치덱을 보내며 실제 투자 검토·상담을 요청하는 메일. 창업진흥센터·창조경제혁신센터·포럼 등 중개기관을 통해 전달되는 경우도 포함하되, 그 경우에도 "이 스타트업을 검토해달라"는 특정 1개 기업 단위의 요청이어야 함. 사업계획서/피치덱 첨부파일이 있는 경우가 전형적임(첨부가능성 "없음"이면 ir일 가능성이 낮음 — 아래로).
-  ⚠ 다음은 ir이 아님, gov_program 또는 biz_proposal이나 etc로 분류:
-    - 데모데이·컨퍼런스·IR 밋업·행사 등에 "참석"을 요청/안내하는 메일 (특정 기업 하나를 검토해달라는 게 아니라 행사 자체에 오라는 것 — 다수 스타트업을 한꺼번에 소개하는 안내도 포함) → gov_program 또는 etc
-    - 첨부파일 없이 그냥 "좋은 기업 있으니 관심 있으면 연락주세요" 식의 짧은 소개/중개 메일 (실제 자료가 첨부되지 않음) → biz_proposal 또는 etc
-- gov_program: 정책자금·공고·행정 협조 요청, 데모데이·컨퍼런스 등 행사 참석 안내/초청 등 순수 공지·안내성 메일
-- biz_proposal: 솔루션 도입 제안, 영업, 제휴·협업 제안, 자료 없는 기업 소개/중개 메일 (스타트업의 투자유치 목적이 아닌 것)
-- spam: 광고, 스팸성 메일
+[투자팀으로 가는 것]
+- ir: 특정 스타트업 한 곳이 자사의 사업계획서·피치덱을 보내며 실제 투자 검토·상담을 요청하는 메일. 창업진흥센터·창조경제혁신센터·포럼 등 중개기관을 통해 전달되는 경우도 포함하되, 그 경우에도 "이 스타트업을 검토해달라"는 특정 1개 기업 단위의 요청이어야 함. 사업계획서/피치덱 첨부파일이 있는 경우가 전형적임(첨부가능성 "없음"이면 ir일 가능성이 낮음).
+- invest_other: 특정 기업 1곳의 IR은 아니지만 투자 업무와 직결되어 투자팀이 봐야 하는 메일.
+    - 데모데이·IR 밋업·투자 컨퍼런스·포럼·VC 네트워킹 행사의 참석 요청·초청·안내 (다수 스타트업을 한꺼번에 소개하는 안내 포함)
+    - LP 참여·출자 참여·펀드 출자 제안, 정책형·모태 펀드 출자사업 공고·안내, 펀드 결성·운용 관련 연락
+    - 공동투자(Co-invest) 제안, 투자 라운드 참여 제안(특정 라운드에 같이 투자하자는 요청)
+
+[관리팀으로 가는 것]
+- gov_program: 정책자금·지원사업 공고, 행정 협조 요청, 세무·회계·법무·규제 관련 순수 공지·안내성 메일 (투자 업무와 무관한 행정)
+- biz_proposal: 우리 회사에 무언가를 팔거나 제공하겠다는 영업·제휴 제안 — 솔루션·SaaS 도입, 사무공간·기업 공간 디자인·인테리어, 사업공간 제휴·제공, 데이터·정보서비스·마케팅 영업, 자료 없는 기업 소개/중개 메일 (스타트업의 투자유치 목적이 아닌 것)
 - etc: 위 어디에도 해당하지 않는 것
+
+- spam: 광고, 스팸성 메일 (어디로도 전달되지 않음)
+
+[헷갈리기 쉬운 경우]
+- "데모데이 참석해주세요" → invest_other (ir 아님, 관리 아님)
+- "저희 펀드에 LP로 참여해주세요 / 출자 제안" → invest_other
+- "첨부 없이 좋은 기업 있으니 관심 있으면 연락주세요" 식의 짧은 중개 메일 → biz_proposal
+- "기업 공간 디자인 제안드립니다", "사업 공간 제휴 제공" → biz_proposal (관리)
+- 특정 스타트업이 자료를 첨부해 투자를 요청 → ir
 
 category가 ir인 경우에만 priority를 의미 있게 판단하세요 (제목·발신자·본문 스니펫으로 볼 때 실제 검토할 만한 딜로 보이면 "높음"). 그 외 카테고리는 priority를 "낮음"으로 두세요.
 

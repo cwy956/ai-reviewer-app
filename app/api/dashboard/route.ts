@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
 import { getSupabase } from "@/lib/db/supabaseClient";
-import { CATEGORY_LABELS, CATEGORY_ORDER, type MailCategory } from "@/lib/mail/classify";
+import { CATEGORY_LABELS, teamOf, type MailCategory } from "@/lib/mail/classify";
 import { getDomain } from "@/lib/domains";
 
 export const runtime = "nodejs";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const HISTORY_LIMIT = 100;
 
 interface ClassifiedMailRow {
   msg_num: number;
   subject: string;
+  from_address: string;
+  mail_date: string | null;
   category: MailCategory;
   domain_id: string | null;
   processed_at: string;
@@ -44,7 +47,7 @@ export async function GET() {
     supabase.from("mail_watch_state").select("*").eq("id", 1).maybeSingle(),
     supabase
       .from("classified_mails")
-      .select("msg_num, subject, category, domain_id, processed_at")
+      .select("msg_num, subject, from_address, mail_date, category, domain_id, processed_at")
       .order("msg_num", { ascending: false })
       .limit(5000),
     supabase
@@ -73,11 +76,8 @@ export async function GET() {
   const isWithin7d = (iso: string) => now - new Date(iso).getTime() <= SEVEN_DAYS_MS;
 
   // --- 요약 카드 ---
-  const categoryCounts: Record<string, number> = {};
-  for (const cat of CATEGORY_ORDER) categoryCounts[cat] = 0;
   let newIRThisWeek = 0;
   for (const m of mails) {
-    categoryCounts[m.category] = (categoryCounts[m.category] ?? 0) + 1;
     if (m.category === "ir" && isWithin7d(m.processed_at)) newIRThisWeek++;
   }
 
@@ -89,31 +89,22 @@ export async function GET() {
     else sendFailed7d++;
   }
 
-  // --- 업종별 IR 분포 ---
+  // --- 담당자 커버리지 갭 ---
   const domainCounts = new Map<string, number>();
   for (const m of mails) {
     if (m.category !== "ir" || !m.domain_id) continue;
     domainCounts.set(m.domain_id, (domainCounts.get(m.domain_id) ?? 0) + 1);
   }
-  const domainDistribution = Array.from(domainCounts.entries())
-    .map(([domainId, count]) => ({ domainId, label: getDomain(domainId)?.label ?? domainId, count }))
-    .sort((a, b) => b.count - a.count);
-
-  // --- 담당자 커버리지 갭 ---
   const nonDefaultPersonas = personas.filter((p) => !p.is_default);
   const coveredDomains = new Set<string>();
   for (const p of nonDefaultPersonas) {
     if (!p.email) continue;
     for (const c of p.domain_criteria ?? []) coveredDomains.add(c.domainId);
   }
-  const uncoveredDomainIds = domainDistribution
-    .map((d) => d.domainId)
-    .filter((id) => !coveredDomains.has(id));
-  const uncoveredDomains = uncoveredDomainIds.map((id) => ({
-    domainId: id,
-    label: getDomain(id)?.label ?? id,
-    irCount: domainCounts.get(id) ?? 0,
-  }));
+  const uncoveredDomains = Array.from(domainCounts.keys())
+    .filter((id) => !coveredDomains.has(id))
+    .map((id) => ({ domainId: id, label: getDomain(id)?.label ?? id, irCount: domainCounts.get(id) ?? 0 }))
+    .sort((a, b) => b.irCount - a.irCount);
 
   const personasWithoutEmail = nonDefaultPersonas
     .filter((p) => !p.email)
@@ -130,35 +121,28 @@ export async function GET() {
       error: l.error,
     }));
 
-  // --- 심사역별 현황 ---
-  const reviewerTable = nonDefaultPersonas.map((p) => ({
-    id: p.id,
-    name: p.name,
-    hasEmail: Boolean(p.email),
-    domainCount: (p.domain_criteria ?? []).length,
-    receivedCount: p.email ? logs.filter((l) => l.recipient_email === p.email && l.status === "sent").length : 0,
-  }));
+  // --- 이메일 수신 이력: 받은 메일 + 누구에게 전달됐는지 ---
+  const deliveriesByMsg = new Map<number, { name: string; status: "sent" | "failed" }[]>();
+  for (const l of logs) {
+    const list = deliveriesByMsg.get(l.msg_num) ?? [];
+    if (!list.some((d) => d.name === (l.recipient_name ?? l.recipient_email))) {
+      list.push({ name: l.recipient_name ?? l.recipient_email, status: l.status });
+    }
+    deliveriesByMsg.set(l.msg_num, list);
+  }
 
-  // --- 최근 활동 피드 (분류 + 발송을 시간순으로 합침) ---
-  type FeedItem =
-    | { type: "classified"; at: string; msgNum: number; subject: string; category: string }
-    | { type: "sent" | "failed"; at: string; msgNum: number; subject: string; recipientEmail: string };
-  const feed: FeedItem[] = [
-    ...mails.slice(0, 50).map(
-      (m): FeedItem => ({ type: "classified", at: m.processed_at, msgNum: m.msg_num, subject: m.subject, category: m.category })
-    ),
-    ...logs.slice(0, 50).map(
-      (l): FeedItem => ({
-        type: l.status === "sent" ? "sent" : "failed",
-        at: l.sent_at,
-        msgNum: l.msg_num,
-        subject: l.subject,
-        recipientEmail: l.recipient_email,
-      })
-    ),
-  ]
-    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-    .slice(0, 40);
+  const mailHistory = [...mails]
+    .sort((a, b) => new Date(b.mail_date ?? b.processed_at).getTime() - new Date(a.mail_date ?? a.processed_at).getTime())
+    .slice(0, HISTORY_LIMIT)
+    .map((m) => ({
+      msgNum: m.msg_num,
+      subject: m.subject,
+      from: m.from_address,
+      receivedAt: m.mail_date ?? m.processed_at,
+      team: teamOf(m.category),
+      categoryLabel: CATEGORY_LABELS[m.category] ?? m.category,
+      deliveries: deliveriesByMsg.get(m.msg_num) ?? [],
+    }));
 
   return NextResponse.json({
     summary: {
@@ -175,9 +159,6 @@ export async function GET() {
       personasWithoutEmail,
       recentFailed,
     },
-    categoryDistribution: CATEGORY_ORDER.map((cat) => ({ category: cat, label: CATEGORY_LABELS[cat], count: categoryCounts[cat] ?? 0 })),
-    domainDistribution,
-    reviewerTable,
-    feed,
+    mailHistory,
   });
 }

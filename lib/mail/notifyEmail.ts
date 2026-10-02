@@ -139,7 +139,7 @@ export async function sendEmailAlerts(rawMails: ClassifiedMail[], dashboardUrl?:
 
   for (const group of groups) {
     const subjectLabel =
-      group.team === "investment" ? `${group.recipientName} 심사역님 담당 영역` : `관리팀 - ${group.recipientName}`;
+      group.team === "investment" ? `투자팀 - ${group.recipientName}` : `관리팀 - ${group.recipientName}`;
     const attachments = group.mails.flatMap((m) => fullByMsgNum.get(m.msgNum)?.attachments ?? []);
     const result = await sendEmail({
       to: group.email,
