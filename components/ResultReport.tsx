@@ -199,10 +199,10 @@ export function ResultReport({
           {eligible ? (
             <>
               <button
-                onClick={() => setEmailSent(`${reviewerName} (${reviewerAffiliation}) 심사역님께 전달 준비가 완료되었습니다.`)}
+                onClick={() => setEmailSent(`${reviewerAffiliation} 투자팀에 전달 준비가 완료되었습니다.`)}
                 className="w-full rounded-lg bg-accent px-4 py-3 font-semibold text-white transition hover:bg-accent-soft"
               >
-                이 심사역에게 메일로 IR 보내기
+                안다아시아벤처스 투자팀에 메일로 IR 보내기
               </button>
               {emailSent && (
                 <p className="mt-2 text-center text-sm text-good">
