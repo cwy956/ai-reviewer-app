@@ -290,8 +290,19 @@ const EXTRA_CHECKPOINTS: Record<string, Extras> = {
   },
   quantum_telecom: {
     market: ["상용화 시점과 연구비·정부과제 의존도가 기재됨"],
-    product: ["큐비트 수·오류율 또는 통신 성능(대역폭·지연) 지표가 기재됨"],
-    traction: ["연구기관·통신사 PoC와 표준화·인증 참여가 기재됨"],
+    product: ["큐비트 수·오류율·결맞음 시간 등 핵심 성능 지표가 기재됨", "극저온·광원 등 핵심 부품 조달·내재화 구조가 기재됨"],
+    traction: ["연구기관·기업 PoC와 클라우드 접근 제공 등 이용 실적이 기재됨"],
+  },
+  telecom: {
+    market: ["통신사·장비사 투자 사이클과 표준 일정이 기재됨"],
+    product: ["대역폭·지연·전력 등 통신 성능 지표가 경쟁 기술과 비교되어 기재됨"],
+    traction: ["통신사·장비사 PoC와 표준화·인증 참여가 기재됨"],
+  },
+  nuclear: {
+    market: ["인허가·규제 일정과 정책 의존도가 기재됨"],
+    product: ["안전성·인허가 단계(설계 인증, 규제기관 심사)가 기재됨", "핵심 기자재·소재의 공급망과 품질 인증(ASME·원자력 품질보증)이 기재됨"],
+    traction: ["발주처·해외 프로젝트 참여 실적이 기재됨"],
+    finance: ["장기 개발·인허가 비용과 마일스톤별 자금 조달 계획이 기재됨"],
   },
   bio: {
     product: [
@@ -349,57 +360,69 @@ interface DomainSeed {
   subs: string[];
 }
 
-// 분류 근거: 12대 국가전략기술(과기정통부), 딥테크 팁스 12대 신산업 분야, 벤처캐피탈협회 업종
-// 분류 + 이 메일함에 실제로 들어온 딜의 업종. 기존 9개 영역 id는 DB·담당자 설정이 참조하므로 유지.
+// 대분류는 12대 국가전략기술(과기정통부) + 기타. 중분류가 평가·라우팅 단위(domain id), 소분류는
+// 세부 영역. 기존 9개 영역 id는 DB·담당자 별표 설정이 참조하므로 유지 — 특히 quantum_telecom은
+// 예전 "양자·차세대통신" id를 그대로 두고 양자 전용으로 쓰며 차세대통신은 telecom으로 분리.
+// 12대 분야에 없는 업종(소재·기후·핀테크·소비재 등)은 "기타" 대분류 아래 중분류로 둠.
 const DOMAIN_SEEDS: DomainSeed[] = [
-  // 딥테크 하드웨어
-  { id: "semiconductor", label: "반도체·소부장", categoryId: "hardware", categoryLabel: "딥테크 하드웨어",
+  // 반도체·디스플레이
+  { id: "semiconductor", label: "반도체·소부장", categoryId: "semi_display", categoryLabel: "반도체·디스플레이",
     subs: ["시스템반도체·팹리스", "AI반도체·NPU", "메모리·차세대메모리", "전력반도체(SiC·GaN)", "파운드리·첨단패키징", "반도체 소재·부품", "반도체 장비", "센서·MEMS"] },
-  { id: "display", label: "디스플레이·광학", categoryId: "hardware", categoryLabel: "딥테크 하드웨어",
+  { id: "display", label: "디스플레이·광학", categoryId: "semi_display", categoryLabel: "반도체·디스플레이",
     subs: ["OLED·마이크로LED", "차량·XR용 디스플레이", "광학 소재·부품", "라이다·광센서", "AR/VR 광학"] },
-  { id: "battery", label: "이차전지", categoryId: "hardware", categoryLabel: "딥테크 하드웨어",
+  // 이차전지
+  { id: "battery", label: "이차전지", categoryId: "battery", categoryLabel: "이차전지",
     subs: ["양극·음극 소재", "전해질·분리막", "전고체·차세대 전지", "셀·팩 제조", "배터리 장비", "BMS·ESS", "재활용·재사용"] },
-  { id: "materials", label: "첨단소재·화학", categoryId: "hardware", categoryLabel: "딥테크 하드웨어",
-    subs: ["나노·탄소 소재", "복합소재", "고분자·특수화학", "금속·세라믹", "코팅·표면처리", "친환경·바이오 소재"] },
-  // 로봇·모빌리티·제조
-  { id: "robotics", label: "로봇·자동화", categoryId: "robot_mobility", categoryLabel: "로봇·모빌리티·제조",
-    subs: ["산업용·협동 로봇", "서비스·물류 로봇", "휴머노이드·AI 로봇", "로봇 핵심부품(감속기·모터)", "드론·무인 시스템", "의료·재활 로봇"] },
-  { id: "mobility", label: "모빌리티", categoryId: "robot_mobility", categoryLabel: "로봇·모빌리티·제조",
+  // 첨단 모빌리티
+  { id: "mobility", label: "첨단 모빌리티", categoryId: "mobility", categoryLabel: "첨단 모빌리티",
     subs: ["전기차·전장부품", "자율주행·ADAS", "UAM·미래항공 모빌리티", "충전 인프라", "마이크로모빌리티", "차량용 소프트웨어"] },
-  { id: "smart_mfg", label: "스마트제조·장비", categoryId: "robot_mobility", categoryLabel: "로봇·모빌리티·제조",
-    subs: ["공정 자동화·MES", "머신비전·검사", "산업용 장비·설비", "3D프린팅·적층제조", "디지털트윈·시뮬레이션", "예지보전·산업 AI"] },
-  // 에너지·우주·환경
-  { id: "space", label: "우주항공·해양", categoryId: "energy_space", categoryLabel: "에너지·우주·환경",
-    subs: ["위성·지상국·데이터", "발사체·추진", "항공기 부품·MRO", "해양플랜트·조선", "해양장비·수중로봇", "우주 소재·부품"] },
-  { id: "hydrogen", label: "수소·에너지", categoryId: "energy_space", categoryLabel: "에너지·우주·환경",
-    subs: ["수전해·수소 생산", "수소 저장·운송", "연료전지", "태양광", "풍력·해상풍력", "원자력·SMR", "ESS·전력망·VPP"] },
-  { id: "climate", label: "기후·환경", categoryId: "energy_space", categoryLabel: "에너지·우주·환경",
-    subs: ["탄소포집·활용(CCUS)", "폐기물·순환경제", "수처리·대기환경", "탄소배출 측정·크레딧", "친환경 건축·건설"] },
-  // 소프트웨어·AI
-  { id: "ai", label: "AI·소프트웨어", categoryId: "software", categoryLabel: "소프트웨어·AI",
-    subs: ["생성형AI·LLM", "비전·영상 AI", "산업·제조 AI", "음성·언어 AI", "데이터·MLOps", "B2B SaaS", "클라우드·인프라", "AI 에이전트·자동화"] },
-  { id: "security", label: "사이버보안·네트워크", categoryId: "software", categoryLabel: "소프트웨어·AI", kind: "software",
-    subs: ["네트워크·엔드포인트 보안", "클라우드·데이터 보안", "암호·인증(양자내성암호)", "OT·산업 보안", "보안 관제·위협 인텔리전스"] },
-  { id: "fintech", label: "핀테크", categoryId: "software", categoryLabel: "소프트웨어·AI", kind: "software",
-    subs: ["결제·송금", "대출·투자 플랫폼", "보험테크", "블록체인·가상자산", "금융 AI·RegTech", "B2B 금융 인프라"] },
-  // 프론티어·바이오
-  { id: "quantum_telecom", label: "양자·차세대통신", categoryId: "frontier", categoryLabel: "프론티어·바이오",
-    subs: ["양자컴퓨팅", "양자통신·암호", "양자센서", "6G·Open RAN", "위성통신", "광통신·네트워크 장비"] },
-  { id: "bio", label: "바이오·신약", categoryId: "frontier", categoryLabel: "프론티어·바이오",
+  // 차세대 원자력
+  { id: "nuclear", label: "차세대 원자력", categoryId: "nuclear", categoryLabel: "차세대 원자력",
+    subs: ["SMR(소형모듈원전)", "원전 기자재·소재", "핵융합", "방사성폐기물·해체", "원자력 안전·SW"] },
+  // 첨단 바이오
+  { id: "bio", label: "바이오·신약", categoryId: "bio", categoryLabel: "첨단 바이오",
     subs: ["저분자 신약", "항체·바이오의약품", "세포·유전자 치료", "백신·감염병", "합성생물학·바이오소재", "체외진단(IVD)"] },
-  { id: "medtech", label: "의료기기·디지털헬스", categoryId: "frontier", categoryLabel: "프론티어·바이오",
+  { id: "medtech", label: "의료기기·디지털헬스", categoryId: "bio", categoryLabel: "첨단 바이오",
     subs: ["의료기기·영상장비", "AI 진단·의료 SW", "디지털치료제", "원격의료·헬스케어 플랫폼", "웨어러블·헬스케어 디바이스", "시니어·재활"] },
-  // 소비·콘텐츠·서비스
-  { id: "beauty", label: "뷰티·패션", categoryId: "consumer", categoryLabel: "소비·콘텐츠·서비스", kind: "consumer",
+  // 우주항공·해양
+  { id: "space", label: "우주항공·해양", categoryId: "space", categoryLabel: "우주항공·해양",
+    subs: ["위성·지상국·데이터", "발사체·추진", "항공기 부품·MRO", "해양플랜트·조선", "해양장비·수중로봇", "우주 소재·부품"] },
+  // 수소
+  { id: "hydrogen", label: "수소·에너지", categoryId: "hydrogen", categoryLabel: "수소",
+    subs: ["수전해·수소 생산", "수소 저장·운송", "연료전지", "태양광", "풍력·해상풍력", "ESS·전력망·VPP"] },
+  // 사이버보안
+  { id: "security", label: "사이버보안·네트워크", categoryId: "security", categoryLabel: "사이버보안", kind: "software",
+    subs: ["네트워크·엔드포인트 보안", "클라우드·데이터 보안", "암호·인증(양자내성암호)", "OT·산업 보안", "보안 관제·위협 인텔리전스"] },
+  // 인공지능
+  { id: "ai", label: "AI·소프트웨어", categoryId: "ai", categoryLabel: "인공지능",
+    subs: ["생성형AI·LLM", "비전·영상 AI", "산업·제조 AI", "음성·언어 AI", "데이터·MLOps", "B2B SaaS", "클라우드·인프라", "AI 에이전트·자동화"] },
+  // 차세대 통신
+  { id: "telecom", label: "차세대 통신", categoryId: "telecom", categoryLabel: "차세대 통신",
+    subs: ["6G·Open RAN", "위성통신", "광통신·네트워크 장비", "무선·RF 부품", "통신 SW·코어망"] },
+  // 첨단 로봇·제조
+  { id: "robotics", label: "로봇·자동화", categoryId: "robot_mfg", categoryLabel: "첨단 로봇·제조",
+    subs: ["산업용·협동 로봇", "서비스·물류 로봇", "휴머노이드·AI 로봇", "로봇 핵심부품(감속기·모터)", "드론·무인 시스템", "의료·재활 로봇"] },
+  { id: "smart_mfg", label: "스마트제조·장비", categoryId: "robot_mfg", categoryLabel: "첨단 로봇·제조",
+    subs: ["공정 자동화·MES", "머신비전·검사", "산업용 장비·설비", "3D프린팅·적층제조", "디지털트윈·시뮬레이션", "예지보전·산업 AI"] },
+  // 양자 (id는 예전 "양자·차세대통신" 것을 유지)
+  { id: "quantum_telecom", label: "양자", categoryId: "quantum", categoryLabel: "양자",
+    subs: ["양자컴퓨팅", "양자통신·암호", "양자센서", "양자 소재·부품(극저온·광원)"] },
+  // 기타 — 12대 분야에 없는 업종
+  { id: "materials", label: "첨단소재·화학", categoryId: "etc", categoryLabel: "기타",
+    subs: ["나노·탄소 소재", "복합소재", "고분자·특수화학", "금속·세라믹", "코팅·표면처리", "친환경·바이오 소재"] },
+  { id: "climate", label: "기후·환경", categoryId: "etc", categoryLabel: "기타",
+    subs: ["탄소포집·활용(CCUS)", "폐기물·순환경제", "수처리·대기환경", "탄소배출 측정·크레딧", "친환경 건축·건설"] },
+  { id: "fintech", label: "핀테크", categoryId: "etc", categoryLabel: "기타", kind: "software",
+    subs: ["결제·송금", "대출·투자 플랫폼", "보험테크", "블록체인·가상자산", "금융 AI·RegTech", "B2B 금융 인프라"] },
+  { id: "beauty", label: "뷰티·패션", categoryId: "etc", categoryLabel: "기타", kind: "consumer",
     subs: ["스킨케어·화장품", "헤어·바디 케어", "뷰티 디바이스", "패션·어패럴", "라이프스타일 브랜드"] },
-  { id: "food", label: "푸드·농업", categoryId: "consumer", categoryLabel: "소비·콘텐츠·서비스", kind: "consumer",
+  { id: "food", label: "푸드·농업", categoryId: "etc", categoryLabel: "기타", kind: "consumer",
     subs: ["푸드테크·대체식품", "스마트팜·농업기술", "식품 제조·건강기능식품", "F&B·외식 브랜드", "반려동물"] },
-  { id: "content", label: "게임·콘텐츠·미디어", categoryId: "consumer", categoryLabel: "소비·콘텐츠·서비스", kind: "consumer",
+  { id: "content", label: "게임·콘텐츠·미디어", categoryId: "etc", categoryLabel: "기타", kind: "consumer",
     subs: ["게임", "웹툰·영상 콘텐츠", "음악·엔터테인먼트", "메타버스·XR 콘텐츠", "크리에이터·미디어 플랫폼"] },
-  { id: "commerce", label: "커머스·플랫폼·서비스", categoryId: "consumer", categoryLabel: "소비·콘텐츠·서비스", kind: "consumer",
+  { id: "commerce", label: "커머스·플랫폼·서비스", categoryId: "etc", categoryLabel: "기타", kind: "consumer",
     subs: ["이커머스·D2C", "여행·예약·관광", "교육·에듀테크", "프롭테크·건설 서비스", "물류·유통", "HR·B2B 서비스"] },
-  // 기타
-  { id: "etc", label: "기타", categoryId: "etc", categoryLabel: "기타", subs: [] },
+  { id: "etc", label: "그 외 기타", categoryId: "etc", categoryLabel: "기타", subs: [] },
 ];
 
 function slug(index: number): string {
