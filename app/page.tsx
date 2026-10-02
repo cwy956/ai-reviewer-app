@@ -71,7 +71,7 @@ export default function Home() {
       <header className="mb-10 text-center">
         <h1 className="text-3xl font-bold text-accent-soft">AI 심사역 IR 평가</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          IR을 올려주세요. <strong className="text-foreground">심사역</strong>이 검토하고, 연락드릴 예정입니다.
+          IR을 올려주세요. <strong className="text-foreground">심사역이 검토하고, 연락드릴 예정입니다.</strong>
           <br />
           AI 분석 결과는 바로 확인할 수 있어요. (투자 자문이 아닌 참고용)
         </p>
