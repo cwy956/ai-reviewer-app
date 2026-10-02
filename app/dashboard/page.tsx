@@ -27,11 +27,6 @@ interface DashboardData {
     sendFailed7d: number;
     lastCheckedAt: string | null;
   };
-  gaps: {
-    uncoveredDomains: { domainId: string; label: string; irCount: number }[];
-    personasWithoutEmail: { id: string; name: string }[];
-    recentFailed: { msgNum: number; subject: string; recipientEmail: string; sentAt: string; error: string | null }[];
-  };
   mailHistory: {
     msgNum: number;
     subject: string;
@@ -131,7 +126,6 @@ export default function DashboardPage() {
     }
   }
 
-  const pendingDeals = deals.filter((d) => d.source === "mail" && !d.evaluation);
   const topDeals = deals
     .filter((d) => d.evaluation?.investmentAttractivenessScore != null)
     .sort((a, b) => (b.evaluation!.investmentAttractivenessScore ?? 0) - (a.evaluation!.investmentAttractivenessScore ?? 0))
@@ -157,60 +151,16 @@ export default function DashboardPage() {
           {data && (
             <>
               {/* 요약 타일 */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
                 <StatTile label="이번 주 신규 IR" value={data.summary.newIRThisWeek} tone="good" />
                 <StatTile label="이번 주 투자팀 수신" value={data.summary.investmentThisWeek} />
                 <StatTile label="이번 주 관리팀 수신" value={data.summary.adminThisWeek} />
-                <StatTile label="평가 안 된 IR" value={pendingDeals.length} tone={pendingDeals.length > 0 ? "warn" : undefined} />
                 <StatTile
                   label="전달 실패 (7일)"
                   value={data.summary.sendFailed7d}
                   tone={data.summary.sendFailed7d > 0 ? "bad" : undefined}
                 />
               </div>
-
-              {/* 처리할 일 */}
-              <SectionCard title="처리할 일">
-                {pendingDeals.length === 0 &&
-                data.gaps.uncoveredDomains.length === 0 &&
-                data.gaps.personasWithoutEmail.length === 0 &&
-                data.gaps.recentFailed.length === 0 ? (
-                  <p className="text-sm text-good">지금 처리할 일이 없어요.</p>
-                ) : (
-                  <ul className="space-y-3 text-sm">
-                    {pendingDeals.length > 0 && (
-                      <li className="flex items-center justify-between gap-3">
-                        <span>평가 안 된 IR {pendingDeals.length}건 — 평가가 필요하거나 PDF가 없는 건이에요</span>
-                        <a href="/ir-deals?pending=1" className="shrink-0 text-xs font-medium text-accent-soft hover:underline">
-                          보러 가기
-                        </a>
-                      </li>
-                    )}
-                    {data.gaps.recentFailed.length > 0 && (
-                      <li>
-                        <p>알림 메일 전달 실패 {data.gaps.recentFailed.length}건</p>
-                        <p className="mt-1 truncate text-xs text-muted">
-                          {data.gaps.recentFailed.slice(0, 3).map((f) => `${f.subject} → ${f.recipientEmail}`).join(" / ")}
-                        </p>
-                      </li>
-                    )}
-                    {data.gaps.uncoveredDomains.length > 0 && (
-                      <li>
-                        <p>담당 심사역이 없는 영역의 IR (관리팀이 대신 받는 중)</p>
-                        <p className="mt-1 text-xs text-muted">
-                          {data.gaps.uncoveredDomains.map((d) => `${d.label} ${d.irCount}건`).join(" · ")}
-                        </p>
-                      </li>
-                    )}
-                    {data.gaps.personasWithoutEmail.length > 0 && (
-                      <li>
-                        <p>이메일이 등록되지 않은 심사역</p>
-                        <p className="mt-1 text-xs text-muted">{data.gaps.personasWithoutEmail.map((p) => p.name).join(", ")}</p>
-                      </li>
-                    )}
-                  </ul>
-                )}
-              </SectionCard>
 
               {/* 투자 매력도 상위 딜 */}
               <SectionCard title="투자 매력도 상위 딜">
