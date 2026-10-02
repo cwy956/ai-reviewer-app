@@ -35,7 +35,8 @@ export interface ClassifiedMail extends MailSummary {
 }
 
 export const MODEL = process.env.MAIL_CLASSIFY_MODEL || "claude-haiku-4-5";
-export const BATCH_SIZE = 60;
+// 한 번에 너무 많이 넣으면 출력이 max_tokens에 잘려 그 묶음 전체가 "분류 실패"로 떨어짐(실제로 발생).
+export const BATCH_SIZE = 20;
 
 export type ClassifyFields = Omit<ClassifiedMail, keyof MailSummary>;
 
@@ -52,7 +53,7 @@ export const CLASSIFY_TOOL: Anthropic.Tool = {
           properties: {
             msgNum: { type: "integer" },
             category: { type: "string", enum: ["ir", "invest_other", "gov_program", "biz_proposal", "spam", "etc"] },
-            reason: { type: "string", description: "한 줄 분류 근거" },
+            reason: { type: "string", description: "한 줄 분류 근거 (40자 이내로 짧게)" },
             priority: {
               type: "string",
               enum: ["높음", "중간", "낮음"],
@@ -172,13 +173,16 @@ export function mergeClassifications(mails: MailSummary[], resultsByMsgNum: Map<
 async function classifyBatch(client: Anthropic, mails: MailSummary[]): Promise<Map<number, ClassifyFields>> {
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 4000,
+    max_tokens: 8000,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: `다음 이메일 목록을 분류하세요.\n\n${formatMailBatch(mails)}` }],
     tools: [CLASSIFY_TOOL],
     tool_choice: { type: "tool", name: "classify_mails" },
   });
 
+  if (response.stop_reason === "max_tokens") {
+    console.error(`[classify] 출력이 max_tokens에서 잘림 (메일 ${mails.length}건) — 이 묶음 결과가 누락될 수 있음`);
+  }
   const toolUse = response.content.find(
     (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
   );
