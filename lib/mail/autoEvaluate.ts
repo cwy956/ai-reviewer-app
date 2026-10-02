@@ -1,4 +1,6 @@
 import { getDomain } from "../domains";
+import { detectDomain } from "../detectDomain";
+import { updateMailDomain } from "./backlogStore";
 import { listPersonas } from "../personas/store";
 import type { Persona } from "../personas/schema";
 import { fetchFullMessage } from "./client";
@@ -60,7 +62,12 @@ async function autoEvaluateOne(mail: ClassifiedMail, defaultPersona: Persona): P
   }
 
   const parsed = await parsePdf(Buffer.from(pdfAttachment.content!, "base64"));
-  const report = await evaluateIr(defaultPersona, domain, parsed.markedText, {}, "internal");
+  // 분류 단계는 본문 200자만 봐서 PDF에만 내용이 있는 IR은 "기타"로 떨어졌음 — 자료를 읽고 영역 보정
+  const detected = await detectDomain(parsed.markedText);
+  const evalDomain = (detected && getDomain(detected.domainId)) || domain;
+  if (evalDomain.id !== domain.id) await updateMailDomain(mail.msgNum, evalDomain.id);
+
+  const report = await evaluateIr(defaultPersona, evalDomain, parsed.markedText, {}, "internal");
   report.extractionQuality = assessExtractionQuality(parsed);
 
   await saveEvaluation({
@@ -69,7 +76,7 @@ async function autoEvaluateOne(mail: ClassifiedMail, defaultPersona: Persona): P
     companyName: report.companyName || undefined,
     attachmentIndex: pdfAttachment.index,
     attachmentFilename: pdfAttachment.filename,
-    domainId: domain.id,
+    domainId: evalDomain.id,
     personaId: defaultPersona.id,
     personaName: defaultPersona.name,
     report,

@@ -81,6 +81,12 @@ export async function upsertClassifiedMails(mails: ClassifiedMail[]): Promise<vo
   }
 }
 
+/** IR 자료를 읽고 영역을 다시 정했을 때(detectDomain) 목록·필터에 반영되도록 분류 테이블도 갱신. */
+export async function updateMailDomain(msgNum: number, domainId: string): Promise<void> {
+  const { error } = await getSupabase().from("classified_mails").update({ domain_id: domainId }).eq("msg_num", msgNum);
+  if (error) console.error(`[mail] 메일 #${msgNum} 영역 갱신 실패:`, error.message);
+}
+
 /** Upserts every classified mail (by msg_num) and records when this batch finished. */
 export async function writeBacklogCache(cache: BacklogCache): Promise<void> {
   const supabase = getSupabase();

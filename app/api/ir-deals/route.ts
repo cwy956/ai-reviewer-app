@@ -11,7 +11,8 @@ function buildDomainLabel(domainLabel: string, subDomain: string | null): string
 }
 
 function buildDealTitle(companyName: string | null, companyTagline: string | null, fallback: string): string {
-  if (!companyName) return fallback;
+  // 모델이 이름을 못 찾았을 때 "<UNKNOWN>" 같은 자리표시자를 넣는 경우가 있음
+  if (!companyName || /unknown|미확인|불명/i.test(companyName)) return fallback;
   return companyTagline ? `${companyName} | ${companyTagline}` : companyName;
 }
 

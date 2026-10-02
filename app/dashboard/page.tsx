@@ -174,10 +174,12 @@ export default function DashboardPage() {
                           href="/ir-deals?sort=investment"
                           className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-accent-tint/40"
                         >
-                          <span className="min-w-0">
-                            <span className="mr-2 text-xs text-muted">{i + 1}</span>
-                            <span className="truncate">{d.title}</span>
-                            <span className="ml-2 text-xs text-muted">{d.domainLabel}</span>
+                          <span className="flex min-w-0 items-start gap-2">
+                            <span className="mt-0.5 w-4 shrink-0 text-xs text-muted">{i + 1}</span>
+                            <span className="min-w-0">
+                              <span className="block truncate">{d.title}</span>
+                              <span className="block truncate text-xs text-muted">{d.domainLabel}</span>
+                            </span>
                           </span>
                           <span className="shrink-0 text-xs text-muted">
                             투자매력도 <span className="font-semibold text-foreground">{d.evaluation!.investmentAttractivenessScore}</span>

@@ -328,6 +328,8 @@ export async function evaluateIr(
 
   const t0 = Date.now();
   const report = fillCategoryLabels(await runToolCall<EvaluationReport>(buildReportTool()));
+  // 모델이 후보에 없는 라벨을 지어내는 경우가 있어 해당 영역의 세부 영역 라벨과 정확히 일치할 때만 저장
+  if (!domain.subDomains.some((s) => s.label === report.subDomain)) report.subDomain = undefined;
   console.log(`[evaluateIr] 기본 리포트 완료 (${Date.now() - t0}ms)`);
 
   if (mode === "internal") {
