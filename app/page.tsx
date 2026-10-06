@@ -14,6 +14,16 @@ const DEFAULT_PERSONA_ID = "default";
 
 type Step = 1 | 2 | 3 | 4;
 
+// 서버가 JSON이 아닌 오류(플랫폼 타임아웃·용량 초과 등 일반 텍스트)를 줘도 화면에 읽히는 메시지가 나오게 함.
+async function readJson(res: Response): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: res.ok ? "응답을 해석하지 못했습니다." : res.status === 504 ? "분석 시간이 초과됐어요. 잠시 후 다시 시도해 주세요." : `서버 오류(${res.status})가 발생했습니다.` };
+  }
+}
+
 export default function Home() {
   const [step, setStep] = useState<Step>(1);
   const [domainId, setDomainId] = useState<string | null>(null);
@@ -32,18 +42,33 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("domainId", domainId);
-      if (subDomainId) formData.append("subDomainId", subDomainId);
-      formData.append("personaId", DEFAULT_PERSONA_ID);
-      if (dealInfo.companyName) formData.append("companyName", dealInfo.companyName);
-      if (dealInfo.stage) formData.append("stage", dealInfo.stage);
-      if (dealInfo.preValuationEok) formData.append("preValuationEok", String(dealInfo.preValuationEok));
-      if (dealInfo.askAmountEok) formData.append("askAmountEok", String(dealInfo.askAmountEok));
+      // 1) 업로드 주소 발급 → 2) 브라우저가 Storage로 직접 업로드(서버 본문 한도 4.5MB 회피) → 3) 경로로 평가 요청
+      const urlRes = await fetch("/api/evaluate/upload-url", { method: "POST" });
+      const target = await readJson(urlRes);
+      if (!urlRes.ok) throw new Error(target.error || "업로드 준비에 실패했습니다.");
 
-      const res = await fetch("/api/evaluate", { method: "POST", body: formData });
-      const data = await res.json();
+      const upload = new FormData();
+      upload.append("cacheControl", "3600");
+      upload.append("", file);
+      const putRes = await fetch(target.signedUrl, { method: "PUT", body: upload });
+      if (!putRes.ok) throw new Error("파일 업로드에 실패했습니다. 파일 크기(최대 50MB)와 형식(PDF)을 확인해 주세요.");
+
+      const res = await fetch("/api/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storagePath: target.path,
+          filename: file.name,
+          domainId,
+          subDomainId: subDomainId || undefined,
+          personaId: DEFAULT_PERSONA_ID,
+          companyName: dealInfo.companyName || undefined,
+          stage: dealInfo.stage || undefined,
+          preValuationEok: dealInfo.preValuationEok || undefined,
+          askAmountEok: dealInfo.askAmountEok || undefined,
+        }),
+      });
+      const data = await readJson(res);
       if (!res.ok) {
         throw new Error(data.error || "평가에 실패했습니다.");
       }
