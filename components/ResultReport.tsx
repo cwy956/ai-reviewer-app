@@ -139,7 +139,8 @@ export function ResultReport({
 }: {
   report: EvaluationReport;
   reviewerAffiliation: string;
-  onReset: () => void;
+  /** 없으면 하단 "다시 평가하기" 버튼을 그리지 않음(재평가 불가능한 곳용). */
+  onReset?: () => void;
   internalMode?: boolean;
   /** Needed only for the on-demand peer-research panel — omit to fall back to the placeholder. */
   evaluationId?: number;
@@ -198,12 +199,14 @@ export function ResultReport({
         </div>
       )}
 
-      <button
-        onClick={onReset}
-        className="w-full rounded-lg border border-panel-border py-3 text-sm text-muted transition hover:border-accent-soft/60 hover:text-foreground"
-      >
-        다시 평가하기
-      </button>
+      {onReset && (
+        <button
+          onClick={onReset}
+          className="w-full rounded-lg border border-panel-border py-3 text-sm text-muted transition hover:border-accent-soft/60 hover:text-foreground"
+        >
+          다시 평가하기
+        </button>
+      )}
     </div>
   );
 }

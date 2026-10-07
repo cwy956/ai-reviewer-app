@@ -438,7 +438,7 @@ export default function IrDealsPage() {
                 <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-panel-border bg-background p-4 md:basis-1/2">
                   <p className="mb-2 text-xs font-semibold text-muted">평가</p>
 
-                  {latestReport && (
+                  {latestReport && !showEvalForm && (
                     <>
                       {selected.source === "mail" && (
                         <button
@@ -451,7 +451,7 @@ export default function IrDealsPage() {
                       <ResultReport
                         report={latestReport}
                         reviewerAffiliation="안다아시아벤처스"
-                        onReset={closeModal}
+                        onReset={selected.source === "mail" ? () => setShowEvalForm(true) : undefined}
                         internalMode
                         evaluationId={currentEvaluationId ?? undefined}
                         dealTitle={selected.title}
@@ -462,6 +462,15 @@ export default function IrDealsPage() {
 
                   {selected.source === "mail" && showEvalForm && fullMail && (
                     <div className="space-y-4">
+                      {latestReport && (
+                        <button
+                          onClick={() => setShowEvalForm(false)}
+                          disabled={evaluating}
+                          className="text-xs text-muted underline hover:text-foreground disabled:opacity-40"
+                        >
+                          ← 기존 평가 결과로 돌아가기
+                        </button>
+                      )}
                       {fullMail.attachments.length === 0 ? (
                         <p className="rounded-lg border border-warn/30 bg-warn/5 p-4 text-sm text-warn">
                           이 메일에는 첨부파일이 없어서 평가할 자료가 없어요.
