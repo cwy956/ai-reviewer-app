@@ -21,11 +21,31 @@ function scoreTone(score: number): { text: string; bar: string } {
 function criterionHeadline(c: InvestmentCriterionAssessment): string {
   if (c.headline) return c.headline;
   const first = c.rationale.split(/(?<=[.다])\s/)[0] ?? c.rationale;
-  return first.length > 60 ? `${first.slice(0, 58)}…` : first;
+  return first.length > 70 ? `${first.slice(0, 68)}…` : first;
 }
 
 function shortLabel(c: InvestmentCriterionAssessment): string {
   return CRITERION_BY_ID[c.criterion]?.shortLabel ?? c.criterionLabel;
+}
+
+/** 긴 글(예전 프롬프트로 저장된 총평 등)은 첫 문장만 보여주고 나머지는 접어 둠 — 한눈에 읽히는 게 우선. */
+function FoldedText({ text, className = "", limit = 110 }: { text: string; className?: string; limit?: number }) {
+  const [open, setOpen] = useState(false);
+  const sentences = text.split(/(?<=[.다요])\s+/);
+  const first = sentences[0] ?? text;
+  const head = first.length > limit * 1.3 ? first.slice(0, limit) + "…" : first;
+  const foldable = text.length > limit * 1.4;
+  const shown = !foldable || open ? text : head;
+  return (
+    <div className={className}>
+      <p>{shown}</p>
+      {foldable && (
+        <button onClick={() => setOpen(!open)} className="mt-1 text-xs font-normal text-accent-soft hover:underline">
+          {open ? "접기" : "자세히 ▾"}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -53,7 +73,7 @@ function ScoreHero({ report }: { report: EvaluationReport }) {
           <div className={`text-5xl font-bold leading-none ${tone?.text ?? "text-muted"}`}>{overall ?? "—"}</div>
           <p className="mt-1 text-[11px] text-muted">투자 매력도</p>
         </div>
-        <p className="text-sm font-medium leading-relaxed text-foreground">{ia.summary}</p>
+        <FoldedText text={ia.summary} className="text-base font-semibold leading-snug text-foreground" />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-4">
@@ -167,10 +187,10 @@ function CriteriaDetail({ criteria }: { criteria: InvestmentCriterionAssessment[
                     {weight != null && <span className="ml-1.5 text-[11px] text-muted">{weight}%</span>}
                     <span className="ml-2 text-xs text-muted">{undeterminable ? "판단 불가" : `${c.score}점`}</span>
                   </p>
-                  <p className="mt-0.5 text-xs text-muted">{undeterminable ? c.rationale : criterionHeadline(c)}</p>
+                  <p className="mt-0.5 text-xs text-muted">{criterionHeadline(c)}</p>
                 </div>
               </button>
-              {isOpen && !undeterminable && (
+              {isOpen && (
                 <p className="ml-5 mt-2 text-xs leading-relaxed text-muted">
                   {c.rationale}
                   <PageBadges pageRefs={c.pageRefs} />
@@ -200,7 +220,7 @@ export function InternalReportView({
 
   return (
     <div className="space-y-4">
-      {report.companySnapshot && <p className="text-sm leading-relaxed text-foreground/90">{report.companySnapshot}</p>}
+      {report.companySnapshot && <FoldedText text={report.companySnapshot} className="text-sm leading-relaxed text-foreground/90" limit={120} />}
 
       <ScoreHero report={report} />
 
