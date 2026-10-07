@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { ActionItem, CitedPoint, EvaluationReport, InvestmentCriterionAssessment } from "@/lib/reportSchema";
 import { CRITERION_BY_ID } from "@/lib/investmentCriteria";
 import { PageBadges } from "./StrengthsImprovements";
@@ -34,10 +33,12 @@ function shortLabel(c: InvestmentCriterionAssessment): string {
   return CRITERION_BY_ID[c.criterion]?.shortLabel ?? c.criterionLabel;
 }
 
-/** 줄바꿈으로 구분된 개조식 글을 한 줄씩 보여줌. 줄바꿈이 없는 예전 평가의 긴 글은 첫 문장만 보여주고 나머지는 접음. */
+/** 줄바꿈으로 구분된 개조식 글을 한 줄씩 보여줌. 줄바꿈이 없는 예전 평가의 긴 글은 문장 단위로 나눠 줄로 보여줌. */
 function Lines({ text, className = "", bullet = true }: { text: string; className?: string; bullet?: boolean }) {
-  const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
-  if (lines.length <= 1 && text.length > 110) return <FoldedText text={text} className={className} />;
+  let lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length <= 1 && text.length > 80) {
+    lines = text.split(/(?<=[.다요])\s+/).map((l) => l.trim()).filter(Boolean);
+  }
   return (
     <ul className={className}>
       {lines.map((l, i) => (
@@ -47,26 +48,6 @@ function Lines({ text, className = "", bullet = true }: { text: string; classNam
         </li>
       ))}
     </ul>
-  );
-}
-
-/** 긴 글(예전 프롬프트로 저장된 총평 등)은 첫 문장만 보여주고 나머지는 접어 둠 — 한눈에 읽히는 게 우선. */
-function FoldedText({ text, className = "", limit = 110 }: { text: string; className?: string; limit?: number }) {
-  const [open, setOpen] = useState(false);
-  const sentences = text.split(/(?<=[.다요])\s+/);
-  const first = sentences[0] ?? text;
-  const head = first.length > limit * 1.3 ? first.slice(0, limit) + "…" : first;
-  const foldable = text.length > limit * 1.4;
-  const shown = !foldable || open ? text : head;
-  return (
-    <div className={className}>
-      <p>{shown}</p>
-      {foldable && (
-        <button onClick={() => setOpen(!open)} className="mt-1 text-xs font-normal text-accent-soft hover:underline">
-          {open ? "접기" : "자세히 ▾"}
-        </button>
-      )}
-    </div>
   );
 }
 
@@ -111,7 +92,7 @@ function ScoreHero({ report }: { report: EvaluationReport }) {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-3">
         {ia.criteria.map((c) => {
           const undeterminable = c.determinable === false;
           const t = scoreTone(c.score);
@@ -134,7 +115,7 @@ function ScoreHero({ report }: { report: EvaluationReport }) {
       <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
         <span className="rounded-full bg-panel px-2 py-0.5 text-foreground">{report.stageAssessment.currentStage} 단계</span>
         <span>자료 충실도 {report.totalScore}/100 (별도 지표)</span>
-        <span>기술·트랙션 각 40% · 편중·밸류 각 10% · 판단 불가는 제외하고 계산</span>
+        <span>기술·트랙션 각 45% · 편중 10% · 판단 불가는 제외하고 계산</span>
       </p>
     </div>
   );
@@ -158,14 +139,11 @@ function PointList({ points, tone }: { points: CitedPoint[]; tone: "good" | "bad
 }
 
 function NextSteps({ steps, questions }: { steps: ActionItem[]; questions: string[] }) {
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? steps : steps.slice(0, 3);
-  const hasMore = steps.length > 3 || questions.length > 0;
   return (
     <Card>
       <SectionTitle hint="이 딜을 진행하려면 대표에게 확인할 것">심사역 다음 액션</SectionTitle>
       <ol className="space-y-2.5">
-        {visible.map((s, i) => (
+        {steps.map((s, i) => (
           <li key={i} className="flex gap-2.5 text-sm">
             <span className="mt-0.5 shrink-0 text-xs font-semibold text-muted">{i + 1}</span>
             <div>
@@ -181,7 +159,7 @@ function NextSteps({ steps, questions }: { steps: ActionItem[]; questions: strin
           </li>
         ))}
       </ol>
-      {expanded && questions.length > 0 && (
+      {questions.length > 0 && (
         <div className="mt-4 border-t border-panel-border pt-3">
           <p className="mb-1.5 text-xs font-semibold text-muted">대표에게 던질 질문</p>
           <ol className="list-decimal space-y-1.5 pl-5 text-xs text-muted">
@@ -191,46 +169,30 @@ function NextSteps({ steps, questions }: { steps: ActionItem[]; questions: strin
           </ol>
         </div>
       )}
-      {hasMore && (
-        <button onClick={() => setExpanded(!expanded)} className="mt-3 text-xs text-accent-soft hover:underline">
-          {expanded
-            ? "접기"
-            : `더 보기${steps.length > 3 ? ` (+${steps.length - 3})` : ""}${questions.length > 0 ? ` · 질문 ${questions.length}개` : ""}`}
-        </button>
-      )}
     </Card>
   );
 }
 
 function CriteriaDetail({ criteria }: { criteria: InvestmentCriterionAssessment[] }) {
-  const [open, setOpen] = useState<string | null>(null);
   return (
     <Card>
-      <SectionTitle hint="눌러서 근거 보기">기준별 판단</SectionTitle>
+      <SectionTitle>기준별 판단</SectionTitle>
       <div className="divide-y divide-panel-border">
         {criteria.map((c) => {
-          const isOpen = open === c.criterion;
           const undeterminable = c.determinable === false;
           const weight = CRITERION_BY_ID[c.criterion]?.weight;
           return (
-            <div key={c.criterion} className="py-2.5 first:pt-0 last:pb-0">
-              <button onClick={() => setOpen(isOpen ? null : c.criterion)} className="flex w-full items-start gap-2 text-left">
-                <span className="mt-0.5 text-xs text-muted">{isOpen ? "▾" : "▸"}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm">
-                    <span className="font-medium text-foreground">{shortLabel(c)}</span>
-                    {weight != null && <span className="ml-1.5 text-[11px] text-muted">{weight}%</span>}
-                    <span className="ml-2 text-xs text-muted">{undeterminable ? "판단 불가" : `${c.score}점`}</span>
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted">{criterionHeadline(c)}</p>
-                </div>
-              </button>
-              {isOpen && (
-                <div className="ml-5 mt-2 text-xs leading-relaxed text-muted">
-                  <Lines text={c.rationale} className="space-y-0.5" />
-                  <PageBadges pageRefs={c.pageRefs} />
-                </div>
-              )}
+            <div key={c.criterion} className="py-3 first:pt-0 last:pb-0">
+              <p className="text-sm">
+                <span className="font-medium text-foreground">{shortLabel(c)}</span>
+                {weight != null && <span className="ml-1.5 text-[11px] text-muted">{weight}%</span>}
+                <span className="ml-2 text-xs text-muted">{undeterminable ? "판단 불가" : `${c.score}점`}</span>
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-foreground/80">{criterionHeadline(c)}</p>
+              <div className="mt-1.5 text-xs leading-relaxed text-muted">
+                <Lines text={c.rationale} className="space-y-0.5" />
+                <PageBadges pageRefs={c.pageRefs} />
+              </div>
             </div>
           );
         })}
@@ -247,15 +209,16 @@ export function InternalReportView({
   report: EvaluationReport;
   /** 피어 리서치 패널(평가 id가 있어야 동작하므로 부모가 만들어 넘김). */
   peerPanel: React.ReactNode;
-  /** 접어 둘 상세 분석(충실도·산업 적합성·스토리라인 등). */
+  /** 자료 충실도·산업 적합성·스토리라인 등 상세 분석 — 요약 아래에 이어서 보여줌. */
   details: React.ReactNode;
 }) {
   const ia = report.investmentAttractiveness!;
-  const [showDetails, setShowDetails] = useState(false);
 
   return (
     <div className="space-y-4">
-      {report.companySnapshot && <Lines text={report.companySnapshot} className="space-y-0.5 text-sm leading-snug text-foreground/90" />}
+      {report.companySnapshot && (
+        <Lines text={report.companySnapshot} className="space-y-0.5 text-sm leading-snug text-foreground/90" />
+      )}
 
       <ScoreHero report={report} />
 
@@ -276,14 +239,9 @@ export function InternalReportView({
 
       {peerPanel}
 
-      <div>
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className="w-full rounded-lg border border-panel-border py-2.5 text-sm text-muted transition hover:border-accent-soft/60 hover:text-foreground"
-        >
-          {showDetails ? "상세 분석 접기 ▴" : "상세 분석 더 보기 (자료 충실도 · 산업 적합성 · 스토리라인) ▾"}
-        </button>
-        {showDetails && <div className="mt-4 space-y-5">{details}</div>}
+      <div className="space-y-5 border-t border-panel-border pt-5">
+        <p className="text-xs font-semibold text-muted">상세 분석 — 자료 충실도 · 산업 적합성 · 스토리라인</p>
+        {details}
       </div>
     </div>
   );

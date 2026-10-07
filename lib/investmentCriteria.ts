@@ -4,8 +4,7 @@
 export type InvestmentCriterionId =
   | "techAdvantage"
   | "tractionCertainty"
-  | "concentrationRisk"
-  | "valuationFit";
+  | "concentrationRisk";
 
 export interface InvestmentCheckDef {
   id: string;
@@ -17,7 +16,7 @@ export interface InvestmentCriterionDef {
   label: string;
   /** 화면 칩·막대용 짧은 이름. */
   shortLabel: string;
-  /** 가중치(합 100). TOP2(기술·트랙션)가 40씩. */
+  /** 가중치(합 100). TOP2(기술·트랙션)가 45씩. */
   weight: number;
   /** 점수의 방향 — 프롬프트에 그대로 들어감. */
   scoreMeaning: string;
@@ -52,7 +51,7 @@ export const INVESTMENT_CRITERIA: InvestmentCriterionDef[] = [
     id: "techAdvantage",
     label: "기술·경쟁우위의 검증 가능성",
     shortLabel: "기술·경쟁우위",
-    weight: 40,
+    weight: 45,
     scoreMeaning: "높을수록 기술·차별성 주장이 외부 근거로 검증되고 방어 가능하다는 뜻",
     checks: TECH_CHECKS,
   },
@@ -60,7 +59,7 @@ export const INVESTMENT_CRITERIA: InvestmentCriterionDef[] = [
     id: "tractionCertainty",
     label: "트랙션의 확정도",
     shortLabel: "트랙션 확정도",
-    weight: 40,
+    weight: 45,
     scoreMeaning: "높을수록 성과가 확정 매출·계약으로 뒷받침되고 질이 좋다는 뜻 (의향서·MOU 위주면 낮음)",
     checks: TRACTION_CHECKS,
   },
@@ -70,14 +69,6 @@ export const INVESTMENT_CRITERIA: InvestmentCriterionDef[] = [
     shortLabel: "편중 리스크",
     weight: 10,
     scoreMeaning: "높을수록 고객·국가·파트너가 분산되어 있다(리스크 낮음), 낮을수록 특정 상대에 쏠려 있다",
-    checks: [],
-  },
-  {
-    id: "valuationFit",
-    label: "밸류에이션 정합성",
-    shortLabel: "밸류에이션",
-    weight: 10,
-    scoreMeaning: "높을수록 비교 가능한 Peer·할인·희석을 반영해도 안전마진이 있다. 희망 밸류 정보가 없으면 판단 불가",
     checks: [],
   },
 ];

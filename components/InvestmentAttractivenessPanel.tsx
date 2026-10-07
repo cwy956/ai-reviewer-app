@@ -86,7 +86,7 @@ export function InvestmentAttractivenessPanel({
         </div>
       </div>
       <p className="mb-4 text-xs text-muted">
-        기술·경쟁우위(40%)와 트랙션 확정도(40%)를 가장 깊게 보고, 나머지 2개는 각 10%예요. 재무는 점수에서 제외했어요.
+        기술·경쟁우위(45%)와 트랙션 확정도(45%)를 가장 깊게 보고, 편중 리스크는 10%예요.
         {excluded > 0 && ` 판단 불가 ${excluded}개는 감점 없이 제외하고 나머지로 계산했어요.`}
       </p>
       <p className="mb-4 text-sm leading-relaxed text-foreground">{investmentAttractiveness.summary}</p>

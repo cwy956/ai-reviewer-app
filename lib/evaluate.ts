@@ -51,7 +51,7 @@ const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
     summary: { type: "string", description: "결론을 뒷받침하는 핵심 근거 개조식 2~3줄(줄바꿈 구분). 결론 문구는 반복하지 말 것" },
     criteria: {
       type: "array",
-      description: "정확히 4개 원소 (techAdvantage, tractionCertainty, concentrationRisk, valuationFit 각 1개씩). checks는 항상 빈 배열.",
+      description: "정확히 3개 원소 (techAdvantage, tractionCertainty, concentrationRisk 각 1개씩). checks는 항상 빈 배열.",
       items: {
         type: "object",
         additionalProperties: false,
@@ -351,7 +351,7 @@ export async function evaluateIr(
         throw new Error("모델이 구조화된 결과를 반환하지 않았습니다.");
       }
       const result = toolUse.input as T;
-      if (validate && !validate(result)) throw new Error("모델 결과가 기대 형식(기준 4개)을 충족하지 않습니다.");
+      if (validate && !validate(result)) throw new Error("모델 결과가 기대 형식(기준 3개)을 충족하지 않습니다.");
       return result;
     };
 
