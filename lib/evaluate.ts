@@ -42,7 +42,7 @@ const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
   properties: {
     verdictReason: {
       type: "string",
-      description: "이 딜의 투자 관점 핵심 이유 한 줄(35자 이내, 명사형 개조식). 예: 실명 대기업 레퍼런스·수주 실적 다수",
+      description: "이 딜의 투자 관점 핵심 이유 한 줄(35자 이내, 명사형 개조식). 예: 대기업 레퍼런스·수주 실적 다수",
     },
     confirmItem: {
       type: "string",
@@ -62,7 +62,7 @@ const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
           },
           criterionLabel: { type: "string" },
           score: { type: "integer", description: "0~100. determinable이 false면 0으로 둠(종합에서 제외됨)" },
-          headline: { type: "string", description: "이 기준의 판단 핵심을 한 줄로 (35자 이내, 예: 실명 대기업 레퍼런스 다수, 계약 세부는 불명)" },
+          headline: { type: "string", description: "이 기준의 판단 핵심을 한 줄로 (35자 이내, 예: 대기업 레퍼런스 다수, 계약 세부는 불명)" },
           determinable: {
             type: "boolean",
             description: "IR(과 산업 일반지식)만으로 이 기준을 판단할 수 있으면 true. 판단할 정보가 아예 없으면 false.",
@@ -249,6 +249,14 @@ function buildReportTool(): Anthropic.Tool {
         items: { type: "string" },
       },
   };
+
+  // 강점·보강 포인트는 headline+text 구조여야 함. 예전엔 {text, pageRefs}만 있어서 모델이 text 안에
+  // headline/text 라벨을 통째로 text에 넣는 문제가 있었음 — 헤드라인 필드를 스키마에 명시.
+  properties.strengths = { type: "array", items: CITED_POINT_SCHEMA };
+  properties.improvements = { type: "array", items: CITED_POINT_SCHEMA };
+  const industryFitSchema = properties.industryFit as { properties: Record<string, unknown> };
+  industryFitSchema.properties.strongPoints = { type: "array", items: CITED_POINT_SCHEMA };
+  industryFitSchema.properties.concerns = { type: "array", items: CITED_POINT_SCHEMA };
 
   const required = [
     "companyName",

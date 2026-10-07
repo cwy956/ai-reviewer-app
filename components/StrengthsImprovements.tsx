@@ -16,7 +16,14 @@ export function PageBadges({ pageRefs }: { pageRefs: number[] }) {
 /** Renders a CitedPoint as a bold scannable headline + a dimmer supporting sentence underneath,
  * so a reviewer skimming the page catches the point without reading full prose. Falls back to the
  * old single-line rendering for reports saved before `headline` existed. */
-export function CitedPointItem({ point }: { point: CitedPoint }) {
+/** 예전 평가 중에는 text 안에 headline/text 라벨이 통째로 들어간 것이 있어 분리해서 보여줌. */
+function normalizePoint(point: CitedPoint): CitedPoint {
+  const m = /^\s*headline:\s*(.+?)\s*\n\s*text:\s*([\s\S]+)$/i.exec(point.text);
+  return m ? { ...point, headline: point.headline ?? m[1], text: m[2] } : point;
+}
+
+export function CitedPointItem({ point: raw }: { point: CitedPoint }) {
+  const point = normalizePoint(raw);
   if (!point.headline) {
     return (
       <li className="leading-relaxed">
