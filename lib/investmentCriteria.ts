@@ -5,8 +5,7 @@ export type InvestmentCriterionId =
   | "techAdvantage"
   | "tractionCertainty"
   | "concentrationRisk"
-  | "valuationFit"
-  | "financialHealth";
+  | "valuationFit";
 
 export interface InvestmentCheckDef {
   id: string;
@@ -16,7 +15,7 @@ export interface InvestmentCheckDef {
 export interface InvestmentCriterionDef {
   id: InvestmentCriterionId;
   label: string;
-  /** 가중치(합 100). TOP2(기술·트랙션)가 35씩. */
+  /** 가중치(합 100). TOP2(기술·트랙션)가 40씩. */
   weight: number;
   /** 점수의 방향 — 프롬프트에 그대로 들어감. */
   scoreMeaning: string;
@@ -50,14 +49,14 @@ export const INVESTMENT_CRITERIA: InvestmentCriterionDef[] = [
   {
     id: "techAdvantage",
     label: "기술·경쟁우위의 검증 가능성",
-    weight: 35,
+    weight: 40,
     scoreMeaning: "높을수록 기술·차별성 주장이 외부 근거로 검증되고 방어 가능하다는 뜻",
     checks: TECH_CHECKS,
   },
   {
     id: "tractionCertainty",
     label: "트랙션의 확정도",
-    weight: 35,
+    weight: 40,
     scoreMeaning: "높을수록 성과가 확정 매출·계약으로 뒷받침되고 질이 좋다는 뜻 (의향서·MOU 위주면 낮음)",
     checks: TRACTION_CHECKS,
   },
@@ -73,13 +72,6 @@ export const INVESTMENT_CRITERIA: InvestmentCriterionDef[] = [
     label: "밸류에이션 정합성",
     weight: 10,
     scoreMeaning: "높을수록 비교 가능한 Peer·할인·희석을 반영해도 안전마진이 있다. 희망 밸류 정보가 없으면 판단 불가",
-    checks: [],
-  },
-  {
-    id: "financialHealth",
-    label: "재무 건전성",
-    weight: 10,
-    scoreMeaning: "높을수록 현금 여력으로 다음 마일스톤·상장까지 버틸 수 있다, 낮을수록 적자·차입·자본잠식으로 자금조달 의존이 크다",
     checks: [],
   },
 ];

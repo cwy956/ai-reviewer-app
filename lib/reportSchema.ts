@@ -59,7 +59,7 @@ export interface InvestmentCheck {
 }
 
 export interface InvestmentCriterionAssessment {
-  /** 새 기준: techAdvantage | tractionCertainty | concentrationRisk | valuationFit | financialHealth.
+  /** 새 기준: techAdvantage | tractionCertainty | concentrationRisk | valuationFit (financialHealth는 제외됨).
    * 예전에 저장된 리포트는 market/competitiveAdvantage/teamExecution/traction/valuationFit이 섞여 있음. */
   criterion: string;
   criterionLabel: string;
