@@ -317,7 +317,7 @@ export async function evaluateIr(
   // deterministic, so retrying the combined call never helped). Splitting keeps each schema
   // small enough for strict mode, which non-strict mode couldn't reliably replace: without it,
   // the model garbled nested fields (e.g. dumped raw tool-call syntax into a string field).
-  const runToolCall = async <T>(tool: Anthropic.Tool): Promise<T> => {
+  const runToolCall = async <T>(tool: Anthropic.Tool, validate?: (v: T) => boolean): Promise<T> => {
     const attempt = async (): Promise<T> => {
       const response = await client.messages.create({
         model: MODEL,
@@ -333,7 +333,9 @@ export async function evaluateIr(
       if (!toolUse) {
         throw new Error("모델이 구조화된 결과를 반환하지 않았습니다.");
       }
-      return toolUse.input as T;
+      const result = toolUse.input as T;
+      if (validate && !validate(result)) throw new Error("모델 결과가 기대 형식(기준 5개)을 충족하지 않습니다.");
+      return result;
     };
 
     try {
@@ -356,7 +358,10 @@ export async function evaluateIr(
     // let the UI (which already renders this field conditionally) show the rest.
     const t1 = Date.now();
     try {
-      const raw = await runToolCall<Omit<InvestmentAttractivenessAssessment, "overallScore">>(INVESTMENT_TOOL);
+      const raw = await runToolCall<Omit<InvestmentAttractivenessAssessment, "overallScore">>(
+        INVESTMENT_TOOL,
+        (v) => Array.isArray(v.criteria) && v.criteria.length === INVESTMENT_CRITERIA.length
+      );
       // 종합 점수는 모델이 아니라 코드가 확정 가중치로 계산 — 판단 불가 기준은 빼고 재정규화.
       for (const c of raw.criteria) {
         c.criterionLabel = INVESTMENT_CRITERIA.find((d) => d.id === c.criterion)?.label ?? c.criterionLabel;
