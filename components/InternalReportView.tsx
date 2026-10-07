@@ -105,10 +105,10 @@ function ScoreHero({ report }: { report: EvaluationReport }) {
               <div className="flex items-baseline justify-between text-xs">
                 <span className="text-muted">{shortLabel(c)}</span>
                 <span className={`font-semibold ${undeterminable ? "text-muted" : t.text}`}>
-                  {undeterminable ? "판단 불가" : c.score}
+                  {undeterminable ? "판단 불가" : (<>{c.score}<span className="ml-0.5 text-xs font-normal text-muted">/100</span></>)}
                 </span>
               </div>
-              <div className="mt-1 h-1.5 rounded-full bg-panel-border">
+              <div className="mt-1 h-1.5 rounded-full bg-foreground/20 ring-1 ring-inset ring-foreground/15">
                 {!undeterminable && <div className={`h-1.5 rounded-full ${t.bar}`} style={{ width: `${c.score}%` }} />}
               </div>
             </div>
@@ -192,12 +192,12 @@ function CriteriaDetail({ criteria }: { criteria: InvestmentCriterionAssessment[
                   <p className="text-sm font-semibold text-foreground">{shortLabel(c)}</p>
                   {weight != null && <p className="text-[11px] text-muted">가중치 {weight}%</p>}
                 </div>
-                <div className="h-3 min-w-0 flex-1 rounded-full bg-panel-border">
+                <div className="h-3 min-w-0 flex-1 rounded-full bg-foreground/20 ring-1 ring-inset ring-foreground/15">
                   {!undeterminable && (
                     <div className={`h-3 rounded-full ${scoreTone(c.score).bar}`} style={{ width: `${c.score}%` }} />
                   )}
                 </div>
-                <div className={`w-14 shrink-0 text-right text-2xl font-bold leading-none ${undeterminable ? "text-sm text-muted" : scoreTone(c.score).text}`}>
+                <div className={`w-20 shrink-0 text-right text-2xl font-bold leading-none ${undeterminable ? "text-sm text-muted" : scoreTone(c.score).text}`}>
                   {undeterminable ? "판단 불가" : c.score}
                 </div>
               </div>
