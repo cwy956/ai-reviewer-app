@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPlatformSubmission } from "@/lib/evaluations/store";
+import { submissionFileExists } from "@/lib/irUploads";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,7 +13,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!submission) {
       return NextResponse.json({ error: "제출을 찾을 수 없습니다." }, { status: 404 });
     }
-    return NextResponse.json({ submission });
+    return NextResponse.json({ submission, hasFile: await submissionFileExists(num) });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "조회에 실패했습니다." },

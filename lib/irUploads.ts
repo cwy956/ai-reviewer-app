@@ -54,3 +54,42 @@ export async function deleteUpload(path: string): Promise<void> {
   const { error } = await getSupabase().storage.from(IR_UPLOAD_BUCKET).remove([path]);
   if (error) console.error(`[ir-uploads] ${path} 삭제 실패:`, error.message);
 }
+
+// ── 영구 보관: 공개 페이지로 제출된 IR 원본. 심사역이 /ir-deals에서 원문을 열람하고 다시 평가할 수 있게 평가 id로 저장.
+const SUBMISSION_BUCKET = "ir-submissions";
+let submissionBucketEnsured = false;
+
+async function ensureSubmissionBucket(): Promise<void> {
+  if (submissionBucketEnsured) return;
+  const { error } = await getSupabase().storage.createBucket(SUBMISSION_BUCKET, {
+    public: false,
+    fileSizeLimit: MAX_FILE_BYTES,
+    allowedMimeTypes: ["application/pdf"],
+  });
+  if (error && !/already exists/i.test(error.message)) {
+    throw new Error(`제출 파일 저장소 준비 실패: ${error.message}`);
+  }
+  submissionBucketEnsured = true;
+}
+
+const submissionPath = (evaluationId: number) => `platform-${evaluationId}.pdf`;
+
+export async function saveSubmissionFile(evaluationId: number, buffer: Buffer): Promise<void> {
+  await ensureSubmissionBucket();
+  const { error } = await getSupabase()
+    .storage.from(SUBMISSION_BUCKET)
+    .upload(submissionPath(evaluationId), buffer, { contentType: "application/pdf", upsert: true });
+  if (error) throw new Error(`제출 파일 저장 실패: ${error.message}`);
+}
+
+export async function submissionFileExists(evaluationId: number): Promise<boolean> {
+  const { data, error } = await getSupabase().storage.from(SUBMISSION_BUCKET).exists(submissionPath(evaluationId));
+  return !error && data === true;
+}
+
+/** 파일이 없으면 null. */
+export async function downloadSubmissionFile(evaluationId: number): Promise<Buffer | null> {
+  const { data, error } = await getSupabase().storage.from(SUBMISSION_BUCKET).download(submissionPath(evaluationId));
+  if (error || !data) return null;
+  return Buffer.from(await data.arrayBuffer());
+}

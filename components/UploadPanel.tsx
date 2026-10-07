@@ -105,7 +105,7 @@ export function UploadPanel({
       </button>
 
       <p className="text-center text-xs text-muted">
-        업로드하신 IR 원본 파일은 저장되지 않으며, AI 평가 결과만 안다아시아벤처스 심사역 검토를 위해 전달됩니다.
+        업로드하신 IR 파일과 AI 평가 결과는 안다아시아벤처스 심사역 검토를 위해서만 안전하게 보관되며, 외부에 공개되지 않습니다.
       </p>
     </div>
   );

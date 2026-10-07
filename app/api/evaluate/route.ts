@@ -4,7 +4,7 @@ import { evaluateIr } from "@/lib/evaluate";
 import { getDomain, getSubDomain } from "@/lib/domains";
 import { getPersona } from "@/lib/personas";
 import { saveEvaluation } from "@/lib/evaluations/store";
-import { downloadUpload, deleteUpload } from "@/lib/irUploads";
+import { downloadUpload, deleteUpload, saveSubmissionFile } from "@/lib/irUploads";
 import type { DealInfo } from "@/lib/buildPrompt";
 
 export const runtime = "nodejs";
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     // save failure break the response the startup is waiting on.
     const companyName = (typeof body.companyName === "string" && body.companyName) || report.companyName || undefined;
     try {
-      await saveEvaluation({
+      const saved = await saveEvaluation({
         source: "platform",
         companyName,
         attachmentFilename: originalName,
@@ -73,6 +73,8 @@ export async function POST(request: Request) {
         personaName: persona.name,
         report,
       });
+      // 심사역이 원문을 열람·재평가할 수 있도록 원본도 보관 (실패해도 평가 결과 반환에는 영향 없음)
+      await saveSubmissionFile(saved.id, buffer).catch((err) => console.error("제출 원본 보관 실패:", err));
     } catch (err) {
       console.error("플랫폼 제출 저장 실패 (평가 결과는 정상 반환됨):", err);
     }
@@ -86,7 +88,7 @@ export async function POST(request: Request) {
     const message = err instanceof Error ? err.message : "평가 중 오류가 발생했습니다.";
     return NextResponse.json({ error: message }, { status: 500 });
   } finally {
-    // IR 원본은 보관하지 않는 정책 — 평가가 끝나면(성공/실패 무관) 임시 업로드 파일 삭제.
+    // 임시 업로드 파일은 평가가 끝나면(성공/실패 무관) 삭제 — 영구 보관본은 위에서 ir-submissions에 따로 저장.
     if (storagePath) await deleteUpload(storagePath);
   }
 }

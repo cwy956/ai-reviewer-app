@@ -107,6 +107,8 @@ export default function IrDealsPage() {
   const [latestReport, setLatestReport] = useState<EvaluationReport | null>(null);
   const [currentEvaluationId, setCurrentEvaluationId] = useState<number | null>(null);
   const [showEvalForm, setShowEvalForm] = useState(false);
+  // 플랫폼 제출은 원본이 보관된 건(hasFile)만 열람·재평가 가능 — 보관을 시작하기 전 제출분은 없음.
+  const [platformHasFile, setPlatformHasFile] = useState(false);
 
   const [formDomainId, setFormDomainId] = useState("");
   const [formAttachmentIndex, setFormAttachmentIndex] = useState(0);
@@ -165,6 +167,7 @@ export default function IrDealsPage() {
     setLatestReport(null);
     setCurrentEvaluationId(null);
     setShowEvalForm(deal.source === "mail" && !deal.evaluation);
+    setPlatformHasFile(false);
     setEvalError(null);
     setFormDomainId(deal.domainId ?? "");
     setFormAttachmentIndex(0);
@@ -178,6 +181,8 @@ export default function IrDealsPage() {
         setLatestReport(data.submission.report);
         setCurrentEvaluationId(data.submission.id);
         setFormDomainId(data.submission.domainId);
+        setPlatformHasFile(Boolean(data.hasFile));
+        if (data.hasFile) setPdfPreviewUrl(`/api/ir-deals/platform/${deal.evaluationId}/file`);
         return;
       }
 
@@ -223,20 +228,28 @@ export default function IrDealsPage() {
   }
 
   async function runEvaluation() {
-    if (!selected || selected.source !== "mail" || !formDomainId || !fullMail?.attachments.length) return;
+    const isPlatform = selected?.source === "platform";
+    if (!selected || !formDomainId) return;
+    if (isPlatform ? !platformHasFile : selected.source !== "mail" || !fullMail?.attachments.length) return;
     setEvaluating(true);
     setEvalError(null);
     try {
-      const res = await fetch("/api/mail/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          msgNum: selected.msgNum,
-          attachmentIndex: formAttachmentIndex,
-          domainId: formDomainId,
-          personaId: DEFAULT_PERSONA_ID,
-        }),
-      });
+      const res = isPlatform
+        ? await fetch(`/api/ir-deals/platform/${selected.evaluationId}/evaluate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ domainId: formDomainId }),
+          })
+        : await fetch("/api/mail/evaluate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              msgNum: selected.msgNum,
+              attachmentIndex: formAttachmentIndex,
+              domainId: formDomainId,
+              personaId: DEFAULT_PERSONA_ID,
+            }),
+          });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "평가에 실패했습니다.");
       setLatestReport(data.evaluation.report);
@@ -427,10 +440,33 @@ export default function IrDealsPage() {
                     </>
                   )}
                   {selected.source === "platform" && (
-                    <p className="text-xs text-muted">
-                      {selected.subtitle} (업로드된 원본 파일은 저장되지 않아 다시 열람할 수 없어요 — 평가 결과만
-                      남아있어요)
-                    </p>
+                    <>
+                      <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-panel-border px-3 py-2 text-sm">
+                        <span className="truncate">📎 {selected.subtitle}</span>
+                        {platformHasFile && (
+                          <a
+                            href={`/api/ir-deals/platform/${selected.evaluationId}/file`}
+                            download={selected.subtitle}
+                            className="shrink-0 text-xs font-medium text-accent-soft hover:underline"
+                          >
+                            다운로드
+                          </a>
+                        )}
+                      </div>
+                      {platformHasFile && pdfPreviewUrl ? (
+                        <div className="mt-4">
+                          <p className="mb-2 text-xs font-semibold text-muted">IR 자료 미리보기</p>
+                          <iframe
+                            src={`${pdfPreviewUrl}#navpanes=0&toolbar=0&view=FitH`}
+                            className="h-[85vh] w-full rounded-md border border-panel-border bg-white"
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted">
+                          원본 보관을 시작하기 전에 제출된 건이라 원문을 열람할 수 없어요 — 평가 결과만 남아있어요.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -440,7 +476,7 @@ export default function IrDealsPage() {
 
                   {latestReport && !showEvalForm && (
                     <>
-                      {selected.source === "mail" && (
+                      {(selected.source === "mail" || platformHasFile) && (
                         <button
                           onClick={() => setShowEvalForm(true)}
                           className="mb-4 text-xs text-accent-soft underline hover:text-accent"
@@ -451,7 +487,7 @@ export default function IrDealsPage() {
                       <ResultReport
                         report={latestReport}
                         reviewerAffiliation="안다아시아벤처스"
-                        onReset={selected.source === "mail" ? () => setShowEvalForm(true) : undefined}
+                        onReset={selected.source === "mail" || platformHasFile ? () => setShowEvalForm(true) : undefined}
                         internalMode
                         evaluationId={currentEvaluationId ?? undefined}
                         dealTitle={selected.title}
@@ -460,7 +496,7 @@ export default function IrDealsPage() {
                     </>
                   )}
 
-                  {selected.source === "mail" && showEvalForm && fullMail && (
+                  {showEvalForm && ((selected.source === "mail" && fullMail) || (selected.source === "platform" && platformHasFile)) && (
                     <div className="space-y-4">
                       {latestReport && (
                         <button
@@ -471,12 +507,13 @@ export default function IrDealsPage() {
                           ← 기존 평가 결과로 돌아가기
                         </button>
                       )}
-                      {fullMail.attachments.length === 0 ? (
+                      {fullMail && fullMail.attachments.length === 0 ? (
                         <p className="rounded-lg border border-warn/30 bg-warn/5 p-4 text-sm text-warn">
                           이 메일에는 첨부파일이 없어서 평가할 자료가 없어요.
                         </p>
                       ) : (
                         <>
+                          {fullMail && (
                           <div>
                             <label className="mb-1 block text-xs text-muted">평가할 첨부파일</label>
                             <select
@@ -491,6 +528,7 @@ export default function IrDealsPage() {
                               ))}
                             </select>
                           </div>
+                          )}
                           <div>
                             <label className="mb-1 block text-xs text-muted">영역</label>
                             <select

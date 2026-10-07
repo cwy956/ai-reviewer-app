@@ -124,6 +124,27 @@ export async function getPlatformSubmission(id: number): Promise<IrEvaluation | 
   return data ? rowToEvaluation(data) : null;
 }
 
+/** 같은 제출을 다시 평가했을 때 기존 행의 결과를 갈아끼움(플랫폼 제출은 딜 하나 = 행 하나라 이력을 쌓지 않음). */
+export async function updateEvaluationReport(
+  id: number,
+  input: { domainId: string; personaId: string; personaName: string; report: EvaluationReport }
+): Promise<IrEvaluation> {
+  const { data, error } = await getSupabase()
+    .from("ir_evaluations")
+    .update({
+      domain_id: input.domainId,
+      persona_id: input.personaId,
+      persona_name: input.personaName,
+      report: input.report,
+      evaluated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw new Error(`평가 결과 갱신 실패: ${error.message}`);
+  return rowToEvaluation(data);
+}
+
 export async function saveEvaluation(input: {
   source: EvaluationSource;
   msgNum?: number;
