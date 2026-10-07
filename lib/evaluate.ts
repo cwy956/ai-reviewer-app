@@ -4,7 +4,7 @@ import { CATEGORY_LABELS } from "./domains";
 import type { Persona } from "./personas/schema";
 import { buildSystemPrompt, buildUserMessage, type DealInfo } from "./buildPrompt";
 import type { EvaluationReport, InvestmentAttractivenessAssessment } from "./reportSchema";
-import { INVESTMENT_CRITERIA, CHECK_VERDICTS, computeWeightedScore, calibrateScore, verdictForScore } from "./investmentCriteria";
+import { INVESTMENT_CRITERIA, CHECK_VERDICTS, computeWeightedScore, calibrateScore, composeVerdict } from "./investmentCriteria";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
@@ -40,14 +40,13 @@ const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
     "내부 심사역 전용 투자 매력도 진단. industryFit/categoryScores와 달리 투자 판단 언어를 명시적으로 허용함.",
   additionalProperties: false,
   properties: {
-    verdict: {
+    verdictReason: {
       type: "string",
-      enum: ["적극 검토", "조건부 검토", "보류"],
-      description: "투자 검토 결론. 적극 검토=지금 바로 투자 검토에 착수할 만함, 조건부 검토=핵심 확인 사항이 해소되면 검토 가능, 보류=구조적 약점이 직접 드러나 현 시점 검토 비권장",
+      description: "이 딜의 투자 관점 핵심 이유 한 줄(35자 이내, 명사형 개조식). 예: 실명 대기업 레퍼런스·수주 실적 다수",
     },
-    verdictLine: {
+    confirmItem: {
       type: "string",
-      description: "총평 결론 한 줄(60자 이내, 개조식). 검토 여부와 그 조건/이유를 담을 것. 예: 적극 투자 검토 필요 — 실명 대기업 레퍼런스·확정 수주 다수 / 수주 86억 중 확정 계약분 확인되면 투자 검토 가능",
+      description: "투자 검토를 확정하려면 가장 먼저 확인해야 할 핵심 사항 하나(30자 이내 명사구, 문장 아님). 예: 수주 86억 중 확정 계약분. 확인할 게 특별히 없으면 빈 문자열",
     },
     summary: { type: "string", description: "결론을 뒷받침하는 핵심 근거 개조식 2~3줄(줄바꿈 구분). 결론 문구는 반복하지 말 것" },
     criteria: {
@@ -96,7 +95,7 @@ const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
       items: ACTION_ITEM_SCHEMA,
     },
   },
-  required: ["verdict", "verdictLine", "summary", "criteria", "strongPoints", "concerns", "reviewerNextSteps"],
+  required: ["verdictReason", "confirmItem", "summary", "criteria", "strongPoints", "concerns", "reviewerNextSteps"],
 };
 
 const INVESTMENT_TOOL: Anthropic.Tool = {
@@ -368,7 +367,7 @@ export async function evaluateIr(
     // let the UI (which already renders this field conditionally) show the rest.
     const t1 = Date.now();
     try {
-      const raw = await runToolCall<Omit<InvestmentAttractivenessAssessment, "overallScore">>(
+      const raw = await runToolCall<Omit<InvestmentAttractivenessAssessment, "overallScore" | "verdict" | "verdictLine"> & { verdictReason: string; confirmItem: string }>(
         INVESTMENT_TOOL,
         (v) => Array.isArray(v.criteria) && v.criteria.length === INVESTMENT_CRITERIA.length
       );
@@ -382,7 +381,7 @@ export async function evaluateIr(
         ...raw,
         overallScore,
         // 화면의 점수와 결론 라벨이 어긋나지 않게 라벨은 최종 점수 기준으로 확정
-        verdict: overallScore == null ? raw.verdict : verdictForScore(overallScore),
+        ...(overallScore == null ? {} : composeVerdict(overallScore, raw.verdictReason, raw.confirmItem)),
       };
       console.log(`[evaluateIr] 투자 매력도 완료 (${Date.now() - t1}ms)`);
     } catch (err) {

@@ -101,9 +101,22 @@ export function calibrateScore(raw: number): number {
   return Math.max(0, Math.min(100, Math.round(raw) + SCORE_CALIBRATION_OFFSET));
 }
 
-/** 최종(보정 후) 점수 → 결론 라벨. */
-export function verdictForScore(score: number): "적극 검토" | "조건부 검토" | "보류" {
-  return score >= 80 ? "적극 검토" : score >= 65 ? "조건부 검토" : "보류";
+/**
+ * 최종(보정 후) 점수로 결론 라벨을 정하고, 모델이 준 재료(이유·확인 항목)를 그 라벨에 맞는 한 줄로 조립.
+ * 모델이 결론 문구까지 쓰면 점수와 어조가 어긋나서(82점인데 "확인되면 검토 가능") 코드가 조립함.
+ */
+export function composeVerdict(
+  score: number,
+  reason: string,
+  confirmItem: string
+): { verdict: "적극 검토" | "조건부 검토" | "보류"; verdictLine: string } {
+  const r = reason.trim();
+  const c = confirmItem.trim();
+  if (score >= 80) return { verdict: "적극 검토", verdictLine: `적극 투자 검토 필요 — ${r}` };
+  if (score >= 65) {
+    return { verdict: "조건부 검토", verdictLine: c ? `${c} 확인되면 투자 검토 가능 — ${r}` : `확인 사항 해소 시 투자 검토 가능 — ${r}` };
+  }
+  return { verdict: "보류", verdictLine: `현 시점 투자 검토 보류 — ${r}` };
 }
 
 export const CHECK_VERDICTS = ["확인됨", "부분", "근거 없음", "해당 없음"] as const;
