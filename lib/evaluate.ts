@@ -54,6 +54,7 @@ const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
           },
           criterionLabel: { type: "string" },
           score: { type: "integer", description: "0~100. determinable이 false면 0으로 둠(종합에서 제외됨)" },
+          headline: { type: "string", description: "이 기준의 판단 핵심을 한 줄로 (35자 이내, 예: 실명 대기업 레퍼런스 다수, 계약 세부는 불명)" },
           determinable: {
             type: "boolean",
             description: "IR(과 산업 일반지식)만으로 이 기준을 판단할 수 있으면 true. 판단할 정보가 아예 없으면 false.",
@@ -75,7 +76,7 @@ const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
             },
           },
         },
-        required: ["criterion", "criterionLabel", "score", "determinable", "rationale", "pageRefs", "checks"],
+        required: ["criterion", "criterionLabel", "score", "headline", "determinable", "rationale", "pageRefs", "checks"],
       },
     },
     strongPoints: { type: "array", items: CITED_POINT_SCHEMA },
@@ -116,7 +117,7 @@ function buildReportTool(): Anthropic.Tool {
       companySnapshot: {
         type: "string",
         description:
-          "이 회사가 무엇을 하는 회사인지 2~3문장으로 간결하고 명확하게 설명 (업종, 핵심 제품/서비스, 타깃 고객, 현재 단계). 심사역이 점수나 분석을 보기 전에 가장 먼저 읽는 문장이므로 전문용어 없이 평이하게 쓰세요. 자료가 부실해도 확인 가능한 선에서 사실 기반으로 작성하고, 추정이면 '~로 추정됨'이라고 밝히세요.",
+          "이 회사가 무엇을 하는 회사인지 2문장 이내(120자 안팎)로 간결하고 명확하게 설명 (업종, 핵심 제품/서비스, 타깃 고객, 현재 단계). 심사역이 점수나 분석을 보기 전에 가장 먼저 읽는 문장이므로 전문용어 없이 평이하게 쓰세요. 자료가 부실해도 확인 가능한 선에서 사실 기반으로 작성하고, 추정이면 '~로 추정됨'이라고 밝히세요.",
       },
       totalScore: { type: "integer", description: "0에서 100 사이의 점수" },
       verdictTag: { type: "string", description: "예: 'Pre-A 적합'" },

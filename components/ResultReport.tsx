@@ -12,6 +12,7 @@ import { ActionPlanList } from "./ActionPlanList";
 import { ReviewerQuestions } from "./ReviewerQuestions";
 import { PeerResearchPlaceholder } from "./PeerResearchPlaceholder";
 import { PeerResearchPanel } from "./PeerResearchPanel";
+import { InternalReportView } from "./InternalReportView";
 
 
 function CompanySnapshotCard({ companySnapshot }: { companySnapshot?: string }) {
@@ -147,6 +148,50 @@ export function ResultReport({
   dealTitle?: string;
   domainLabel?: string;
 }) {
+  const peerPanel =
+    internalMode && evaluationId && dealTitle && domainLabel ? (
+      <PeerResearchPanel
+        evaluationId={evaluationId}
+        dealTitle={dealTitle}
+        domainLabel={domainLabel}
+        initial={report.peerResearch}
+      />
+    ) : (
+      <PeerResearchPlaceholder />
+    );
+
+  // 내부 심사역용: 결론·점수·핵심 요인·할 일을 먼저, 나머지 상세는 접어서 보여줌
+  if (internalMode && report.investmentAttractiveness) {
+    return (
+      <div className="space-y-5">
+        <ExtractionQualityBanner extractionQuality={report.extractionQuality} />
+        <InternalReportView
+          report={report}
+          peerPanel={peerPanel}
+          details={
+            <>
+              <div className="rounded-lg border border-panel-border bg-panel p-5">
+                <RadarScoreChart categoryScores={report.categoryScores} />
+              </div>
+              <StageFitBar stageAssessment={report.stageAssessment} />
+              <StrengthsImprovements strengths={report.strengths} improvements={report.improvements} />
+              <IndustryFitPanel industryFit={report.industryFit} />
+              <CategoryDetail categoryScores={report.categoryScores} />
+              <StorylineTimeline storyline={report.storyline} />
+            </>
+          }
+        />
+        {onReset && (
+          <button
+            onClick={onReset}
+            className="w-full rounded-lg border border-panel-border py-3 text-sm text-muted transition hover:border-accent-soft/60 hover:text-foreground"
+          >
+            다시 평가하기
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

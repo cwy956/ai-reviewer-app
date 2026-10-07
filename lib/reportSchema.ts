@@ -66,6 +66,8 @@ export interface InvestmentCriterionAssessment {
   score: number;
   /** false면 IR에 이 기준을 판단할 정보가 없다는 뜻 — 종합 점수에서 제외(감점 아님). 구 리포트는 undefined(=판단됨). */
   determinable?: boolean;
+  /** 한 줄 핵심(35자 내외). 예전 리포트에는 없음. */
+  headline?: string;
   rationale: string;
   pageRefs: number[];
   /** 기술·트랙션(TOP2)만 — 세부 질문별 검증 결과. 구 리포트·나머지 기준은 없음/빈 배열. */
