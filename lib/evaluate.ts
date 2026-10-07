@@ -4,7 +4,7 @@ import { CATEGORY_LABELS } from "./domains";
 import type { Persona } from "./personas/schema";
 import { buildSystemPrompt, buildUserMessage, type DealInfo } from "./buildPrompt";
 import type { EvaluationReport, InvestmentAttractivenessAssessment } from "./reportSchema";
-import { INVESTMENT_CRITERIA, CHECK_VERDICTS, computeWeightedScore } from "./investmentCriteria";
+import { INVESTMENT_CRITERIA, CHECK_VERDICTS, computeWeightedScore, calibrateScore } from "./investmentCriteria";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
@@ -365,7 +365,7 @@ export async function evaluateIr(
       // 종합 점수는 모델이 아니라 코드가 확정 가중치로 계산 — 판단 불가 기준은 빼고 재정규화.
       for (const c of raw.criteria) {
         c.criterionLabel = INVESTMENT_CRITERIA.find((d) => d.id === c.criterion)?.label ?? c.criterionLabel;
-        if (c.determinable === false) c.score = 0;
+        c.score = c.determinable === false ? 0 : calibrateScore(c.score);
       }
       report.investmentAttractiveness = {
         ...raw,

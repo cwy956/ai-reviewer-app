@@ -84,6 +84,17 @@ export const CHECK_LABEL_BY_ID: Record<string, string> = Object.fromEntries(
   INVESTMENT_CRITERIA.flatMap((c) => c.checks.map((k) => [k.id, k.label]))
 );
 
+/**
+ * 프롬프트로 "90점에서 시작"이라고 해도 모델이 같은 IR에 64~72점대로 수렴해서(실제 투자한 딜이 80점 안팎이어야 한다는
+ * 기대와 어긋남), 코드에서 모델 점수에 일정 가산을 더함. 기준별 점수에 적용한 뒤 가중평균을 내므로 화면의 기준별
+ * 점수와 종합이 일관됨. 값을 바꾸려면 여기만 고치면 되고, 이미 저장된 평가는 영향 없음.
+ */
+export const SCORE_CALIBRATION_OFFSET = 10;
+
+export function calibrateScore(raw: number): number {
+  return Math.max(0, Math.min(100, Math.round(raw) + SCORE_CALIBRATION_OFFSET));
+}
+
 export const CHECK_VERDICTS = ["확인됨", "부분", "근거 없음", "해당 없음"] as const;
 export type CheckVerdict = (typeof CHECK_VERDICTS)[number];
 
