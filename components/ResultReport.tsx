@@ -13,6 +13,7 @@ import { ReviewerQuestions } from "./ReviewerQuestions";
 import { PeerResearchPlaceholder } from "./PeerResearchPlaceholder";
 import { PeerResearchPanel } from "./PeerResearchPanel";
 import { InternalReportView } from "./InternalReportView";
+import { sanitizeReport } from "@/lib/sanitizeReport";
 
 
 function CompanySnapshotCard({ companySnapshot }: { companySnapshot?: string }) {
@@ -130,7 +131,7 @@ function CategoryDetail({ categoryScores }: { categoryScores: EvaluationReport["
 }
 
 export function ResultReport({
-  report,
+  report: rawReport,
   reviewerAffiliation,
   onReset,
   internalMode = false,
@@ -148,6 +149,7 @@ export function ResultReport({
   dealTitle?: string;
   domainLabel?: string;
 }) {
+  const report = sanitizeReport(rawReport);
   const peerPanel =
     internalMode && evaluationId && dealTitle && domainLabel ? (
       <PeerResearchPanel
@@ -177,7 +179,6 @@ export function ResultReport({
               <StrengthsImprovements strengths={report.strengths} improvements={report.improvements} />
               <IndustryFitPanel industryFit={report.industryFit} />
               <CategoryDetail categoryScores={report.categoryScores} />
-              <StorylineTimeline storyline={report.storyline} />
             </>
           }
         />

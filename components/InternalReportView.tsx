@@ -64,6 +64,10 @@ function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: st
   );
 }
 
+/** 점수에서 제외된 기준(밸류에이션·재무)은 예전 평가에 남아 있어도 보여주지 않음. */
+const HIDDEN_CRITERIA = new Set(["valuationFit", "financialHealth"]);
+const visibleCriteria = (criteria: InvestmentCriterionAssessment[]) => criteria.filter((c) => !HIDDEN_CRITERIA.has(c.criterion));
+
 function ScoreHero({ report }: { report: EvaluationReport }) {
   const ia = report.investmentAttractiveness!;
   const overall = ia.overallScore;
@@ -93,7 +97,7 @@ function ScoreHero({ report }: { report: EvaluationReport }) {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-3">
-        {ia.criteria.map((c) => {
+        {visibleCriteria(ia.criteria).map((c) => {
           const undeterminable = c.determinable === false;
           const t = scoreTone(c.score);
           return (
@@ -235,12 +239,12 @@ export function InternalReportView({
 
       {ia.reviewerNextSteps?.length > 0 && <NextSteps steps={ia.reviewerNextSteps} questions={report.reviewerQuestions ?? []} />}
 
-      <CriteriaDetail criteria={ia.criteria} />
+      <CriteriaDetail criteria={visibleCriteria(ia.criteria)} />
 
       {peerPanel}
 
       <div className="space-y-5 border-t border-panel-border pt-5">
-        <p className="text-xs font-semibold text-muted">상세 분석 — 자료 충실도 · 산업 적합성 · 스토리라인</p>
+        <p className="text-xs font-semibold text-muted">상세 분석 — 자료 충실도 · 산업 적합성</p>
         {details}
       </div>
     </div>

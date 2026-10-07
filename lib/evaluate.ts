@@ -4,6 +4,7 @@ import { CATEGORY_LABELS } from "./domains";
 import type { Persona } from "./personas/schema";
 import { buildSystemPrompt, buildUserMessage, type DealInfo } from "./buildPrompt";
 import type { EvaluationReport, InvestmentAttractivenessAssessment } from "./reportSchema";
+import { sanitizeReport } from "./sanitizeReport";
 import { INVESTMENT_CRITERIA, CHECK_VERDICTS, computeWeightedScore, calibrateScore, composeVerdict } from "./investmentCriteria";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
@@ -105,7 +106,7 @@ const INVESTMENT_TOOL: Anthropic.Tool = {
   input_schema: INVESTMENT_ATTRACTIVENESS_SCHEMA,
 };
 
-function buildReportTool(): Anthropic.Tool {
+function buildReportTool(mode: "external" | "internal"): Anthropic.Tool {
   const properties: Record<string, unknown> = {
       companyName: {
         type: "string",
@@ -258,6 +259,9 @@ function buildReportTool(): Anthropic.Tool {
   industryFitSchema.properties.strongPoints = { type: "array", items: CITED_POINT_SCHEMA };
   industryFitSchema.properties.concerns = { type: "array", items: CITED_POINT_SCHEMA };
 
+  // 스토리라인(회사를 소개하는 흐름)은 스타트업용 피드백이라 내부 심사역 평가에서는 생성하지 않음
+  if (mode === "internal") delete properties.storyline;
+
   const required = [
     "companyName",
     "companyTagline",
@@ -271,10 +275,11 @@ function buildReportTool(): Anthropic.Tool {
     "strengths",
     "improvements",
     "industryFit",
-    "storyline",
     "actionPlan",
     "reviewerQuestions",
   ];
+
+  if (mode === "external") required.splice(required.indexOf("actionPlan"), 0, "storyline");
 
   return {
     name: "submit_report",
@@ -364,7 +369,8 @@ export async function evaluateIr(
   };
 
   const t0 = Date.now();
-  const report = fillCategoryLabels(await runToolCall<EvaluationReport>(buildReportTool()));
+  const report = fillCategoryLabels(await runToolCall<EvaluationReport>(buildReportTool(mode)));
+  report.storyline = report.storyline ?? [];
   // 모델이 후보에 없는 라벨을 지어내는 경우가 있어 해당 영역의 세부 영역 라벨과 정확히 일치할 때만 저장
   if (!domain.subDomains.some((s) => s.label === report.subDomain)) report.subDomain = undefined;
   console.log(`[evaluateIr] 기본 리포트 완료 (${Date.now() - t0}ms)`);
@@ -397,5 +403,5 @@ export async function evaluateIr(
     }
   }
 
-  return report;
+  return sanitizeReport(report);
 }
