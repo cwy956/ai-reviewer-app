@@ -77,6 +77,11 @@ export interface InvestmentCriterionAssessment {
 export interface InvestmentAttractivenessAssessment {
   /** 가중평균(코드에서 계산, 판단 불가 기준 제외). 판단 가능한 기준이 하나도 없으면 null. */
   overallScore: number | null;
+  /** 투자 검토 결론 라벨. 예전 리포트에는 없음. */
+  verdict?: "적극 검토" | "조건부 검토" | "보류";
+  /** 결론 한 줄 — 투자 검토 여부와 조건(예: "계약 확정분 확인 시 투자 검토 가능"). 예전 리포트에는 없음. */
+  verdictLine?: string;
+  /** 결론을 뒷받침하는 근거 2~3줄(개조식). */
   summary: string;
   criteria: InvestmentCriterionAssessment[];
   strongPoints: CitedPoint[];

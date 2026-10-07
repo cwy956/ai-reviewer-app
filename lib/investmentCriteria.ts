@@ -101,6 +101,11 @@ export function calibrateScore(raw: number): number {
   return Math.max(0, Math.min(100, Math.round(raw) + SCORE_CALIBRATION_OFFSET));
 }
 
+/** 최종(보정 후) 점수 → 결론 라벨. */
+export function verdictForScore(score: number): "적극 검토" | "조건부 검토" | "보류" {
+  return score >= 80 ? "적극 검토" : score >= 65 ? "조건부 검토" : "보류";
+}
+
 export const CHECK_VERDICTS = ["확인됨", "부분", "근거 없음", "해당 없음"] as const;
 export type CheckVerdict = (typeof CHECK_VERDICTS)[number];
 

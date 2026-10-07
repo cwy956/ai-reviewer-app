@@ -11,6 +11,12 @@ const PRIORITY_STYLES: Record<ActionItem["priority"], string> = {
   낮음: "bg-black/5 text-muted",
 };
 
+const VERDICT_STYLES: Record<string, string> = {
+  "적극 검토": "bg-good/15 text-good",
+  "조건부 검토": "bg-warn/15 text-warn",
+  보류: "bg-bad/15 text-bad",
+};
+
 function scoreTone(score: number): { text: string; bar: string } {
   if (score >= 75) return { text: "text-good", bar: "bg-good" };
   if (score >= 55) return { text: "text-warn", bar: "bg-warn" };
@@ -89,7 +95,20 @@ function ScoreHero({ report }: { report: EvaluationReport }) {
           <div className={`text-5xl font-bold leading-none ${tone?.text ?? "text-muted"}`}>{overall ?? "—"}</div>
           <p className="mt-1 text-[11px] text-muted">투자 매력도</p>
         </div>
-        <Lines text={ia.summary} className="space-y-1 text-[15px] font-semibold leading-snug text-foreground" />
+        <div className="min-w-0">
+          {ia.verdict && (
+            <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${VERDICT_STYLES[ia.verdict]}`}>
+              {ia.verdict}
+            </span>
+          )}
+          {ia.verdictLine && (
+            <p className="mt-1.5 text-base font-bold leading-snug text-foreground">{ia.verdictLine}</p>
+          )}
+          <Lines
+            text={ia.summary}
+            className={`space-y-0.5 leading-snug ${ia.verdictLine ? "mt-2 text-sm font-normal text-foreground/80" : "text-[15px] font-semibold text-foreground"}`}
+          />
+        </div>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-4">
