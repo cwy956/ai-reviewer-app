@@ -50,16 +50,31 @@ export interface IndustryFitAssessment {
  * Criteria are a placeholder starter set; expected to be recalibrated once real 투심보고서
  * examples are available to learn what 안다아시아벤처스 actually weighs.
  */
-export interface InvestmentCriterionAssessment {
-  criterion: "market" | "competitiveAdvantage" | "teamExecution" | "traction" | "valuationFit";
-  criterionLabel: string;
-  score: number;
-  rationale: string;
+export interface InvestmentCheck {
+  /** D1-1..8(기술) / D2-1..8(트랙션) — lib/investmentCriteria.ts의 세부 질문 id. */
+  id: string;
+  verdict: "확인됨" | "부분" | "근거 없음" | "해당 없음";
+  evidence: string;
   pageRefs: number[];
 }
 
+export interface InvestmentCriterionAssessment {
+  /** 새 기준: techAdvantage | tractionCertainty | concentrationRisk | valuationFit | financialHealth.
+   * 예전에 저장된 리포트는 market/competitiveAdvantage/teamExecution/traction/valuationFit이 섞여 있음. */
+  criterion: string;
+  criterionLabel: string;
+  score: number;
+  /** false면 IR에 이 기준을 판단할 정보가 없다는 뜻 — 종합 점수에서 제외(감점 아님). 구 리포트는 undefined(=판단됨). */
+  determinable?: boolean;
+  rationale: string;
+  pageRefs: number[];
+  /** 기술·트랙션(TOP2)만 — 세부 질문별 검증 결과. 구 리포트·나머지 기준은 없음/빈 배열. */
+  checks?: InvestmentCheck[];
+}
+
 export interface InvestmentAttractivenessAssessment {
-  overallScore: number;
+  /** 가중평균(코드에서 계산, 판단 불가 기준 제외). 판단 가능한 기준이 하나도 없으면 null. */
+  overallScore: number | null;
   summary: string;
   criteria: InvestmentCriterionAssessment[];
   strongPoints: CitedPoint[];

@@ -4,6 +4,7 @@ import { CATEGORY_LABELS } from "./domains";
 import type { Persona } from "./personas/schema";
 import { buildSystemPrompt, buildUserMessage, type DealInfo } from "./buildPrompt";
 import type { EvaluationReport, InvestmentAttractivenessAssessment } from "./reportSchema";
+import { INVESTMENT_CRITERIA, CHECK_VERDICTS, computeWeightedScore } from "./investmentCriteria";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
@@ -39,25 +40,42 @@ const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
     "내부 심사역 전용 투자 매력도 진단. industryFit/categoryScores와 달리 투자 판단 언어를 명시적으로 허용함.",
   additionalProperties: false,
   properties: {
-    overallScore: { type: "integer", description: "0에서 100 사이, 종합 투자 매력도 점수" },
     summary: { type: "string", description: "투자 관점 종합 총평" },
     criteria: {
       type: "array",
-      description: "정확히 5개 원소 (market, competitiveAdvantage, teamExecution, traction, valuationFit 각 1개씩)",
+      description: "정확히 5개 원소 (techAdvantage, tractionCertainty, concentrationRisk, valuationFit, financialHealth 각 1개씩). techAdvantage·tractionCertainty는 checks에 세부 질문 8개씩 전부 채우고, 나머지 3개는 checks를 빈 배열로.",
       items: {
         type: "object",
         additionalProperties: false,
         properties: {
           criterion: {
             type: "string",
-            enum: ["market", "competitiveAdvantage", "teamExecution", "traction", "valuationFit"],
+            enum: INVESTMENT_CRITERIA.map((c) => c.id),
           },
           criterionLabel: { type: "string" },
-          score: { type: "integer" },
+          score: { type: "integer", description: "0~100. determinable이 false면 0으로 둠(종합에서 제외됨)" },
+          determinable: {
+            type: "boolean",
+            description: "IR(과 산업 일반지식)만으로 이 기준을 판단할 수 있으면 true. 판단할 정보가 아예 없으면 false.",
+          },
           rationale: { type: "string" },
           pageRefs: { type: "array", items: { type: "integer" } },
+          checks: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                id: { type: "string", description: "세부 질문 id (D1-1~D1-8 또는 D2-1~D2-8)" },
+                verdict: { type: "string", enum: [...CHECK_VERDICTS] },
+                evidence: { type: "string", description: "판정 근거 1~2문장 — IR의 구체적 수치·고객명·문구를 인용" },
+                pageRefs: { type: "array", items: { type: "integer" } },
+              },
+              required: ["id", "verdict", "evidence", "pageRefs"],
+            },
+          },
         },
-        required: ["criterion", "criterionLabel", "score", "rationale", "pageRefs"],
+        required: ["criterion", "criterionLabel", "score", "determinable", "rationale", "pageRefs", "checks"],
       },
     },
     strongPoints: { type: "array", items: CITED_POINT_SCHEMA },
@@ -68,7 +86,7 @@ const INVESTMENT_ATTRACTIVENESS_SCHEMA: Anthropic.Tool["input_schema"] = {
       items: ACTION_ITEM_SCHEMA,
     },
   },
-  required: ["overallScore", "summary", "criteria", "strongPoints", "concerns", "reviewerNextSteps"],
+  required: ["summary", "criteria", "strongPoints", "concerns", "reviewerNextSteps"],
 };
 
 const INVESTMENT_TOOL: Anthropic.Tool = {
@@ -338,7 +356,16 @@ export async function evaluateIr(
     // let the UI (which already renders this field conditionally) show the rest.
     const t1 = Date.now();
     try {
-      report.investmentAttractiveness = await runToolCall<InvestmentAttractivenessAssessment>(INVESTMENT_TOOL);
+      const raw = await runToolCall<Omit<InvestmentAttractivenessAssessment, "overallScore">>(INVESTMENT_TOOL);
+      // 종합 점수는 모델이 아니라 코드가 확정 가중치로 계산 — 판단 불가 기준은 빼고 재정규화.
+      for (const c of raw.criteria) {
+        c.criterionLabel = INVESTMENT_CRITERIA.find((d) => d.id === c.criterion)?.label ?? c.criterionLabel;
+        if (c.determinable === false) c.score = 0;
+      }
+      report.investmentAttractiveness = {
+        ...raw,
+        overallScore: computeWeightedScore(raw.criteria as { criterion: string; score: number; determinable: boolean }[]),
+      };
       console.log(`[evaluateIr] 투자 매력도 완료 (${Date.now() - t1}ms)`);
     } catch (err) {
       console.error(`[evaluateIr] 투자 매력도 평가 실패, 기본 리포트만 반환 (${Date.now() - t1}ms):`, err);

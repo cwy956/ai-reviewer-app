@@ -1,5 +1,6 @@
 import { CATEGORY_LABELS, type Domain } from "./domains";
 import type { Persona } from "./personas/schema";
+import { INVESTMENT_CRITERIA } from "./investmentCriteria";
 
 export interface DealInfo {
   stage?: string;
@@ -70,33 +71,58 @@ categoryScores(자료 완성도: 체크포인트별 정보 기재 여부)와는 
 이 판단도 여전히 "투자 매력도"나 "투자 여부"가 아니라 "자료 속 주장의 산업적 타당성"에 대한 진단입니다. "투자하라/투자하지 마라", "유망하다/유망하지 않다" 같은 표현은 절대 쓰지 마세요. 대신 "이 접근은 이 산업의 통상적 기준에서 근거가 탄탄합니다/약합니다" 식으로, 왜 그런지 산업 맥락과 함께 서술하세요. strongPoints와 concerns에도 반드시 페이지 근거(pageRefs)를 다세요.`;
 }
 
-const INVESTMENT_CRITERIA: { id: string; label: string }[] = [
-  { id: "market", label: "시장성 (시장 규모·타이밍)" },
-  { id: "competitiveAdvantage", label: "경쟁 우위 (차별화·진입장벽)" },
-  { id: "teamExecution", label: "팀 실행력" },
-  { id: "traction", label: "트랙션·성장성" },
-  { id: "valuationFit", label: "밸류에이션 적정성" },
-];
-
 function renderInvestmentAttractivenessInstructions(): string {
-  return `[투자 매력도 진단 — investmentAttractiveness 필드, 내부 심사역 전용]
-이 리포트는 안다아시아벤처스 내부 심사역만 보는 내부용입니다. 스타트업에게 전달되지 않으므로, 이 필드에서는 위의 "투자 매력도 판단 금지" 가드레일을 예외로 하고 실제 투자심사 관점에서 이 딜이 얼마나 매력적인지 직접 평가하세요.
+  const criteriaLines = INVESTMENT_CRITERIA.map(
+    (c) => `- ${c.id} — ${c.label} (가중치 ${c.weight}%): ${c.scoreMeaning}`
+  ).join("\n");
+  const renderChecks = (criterionId: string) => {
+    const def = INVESTMENT_CRITERIA.find((c) => c.id === criterionId)!;
+    return def.checks.map((k) => `  ${k.id}. ${k.label}`).join("\n");
+  };
 
-다음 5개 기준 각각에 대해 0~100점과 근거(페이지 인용 포함)를 제시하세요:
-${INVESTMENT_CRITERIA.map((c) => `- ${c.id}: ${c.label}`).join("\n")}
+  return `[투자 매력도 진단 — investmentAttractiveness 필드, 내부 심사역 전용]
+이 리포트는 안다아시아벤처스 내부 심사역만 보는 내부용입니다. 스타트업에게 전달되지 않으므로, 이 필드에서는 위의 "투자 매력도 판단 금지" 가드레일을 예외로 하고 실제 투자심사 관점에서 이 딜이 얼마나 매력적인지 직접 평가하세요. 이 기준은 안다아시아벤처스의 실제 투자심사보고서 19건과 투심 회의 녹취 7건을 분석해 확정한 것입니다.
+
+[5개 기준 — criteria에 각 1개씩, 0~100점과 근거(페이지 인용 포함)]
+${criteriaLines}
+
+종합 점수(overallScore)는 시스템이 위 가중치로 계산하므로 직접 산정하지 마세요. 기술·경쟁우위와 트랙션 확정도가 합쳐 70%를 차지하는 TOP2이며, 투심에서 가장 많이 걸리는 지점입니다. 이 둘은 "엄청나게 파고들어" 평가해야 합니다.
+
+[TOP2 심층 검증 — checks]
+techAdvantage와 tractionCertainty는 아래 세부 질문 8개씩을 하나도 빠뜨리지 말고 전부 checks에 채우세요. 각 질문마다 verdict를 하나 고릅니다.
+- 확인됨: IR이 구체적 근거(수치·고객 실명·인증·계약 등)를 제시하고 그것이 질문의 요구를 충족함
+- 부분: 일부만 제시됐거나, 근거가 약하거나, 정량·출처가 불분명함
+- 근거 없음: IR에 해당 내용이 없거나 주장만 있고 뒷받침이 전혀 없음
+- 해당 없음: 이 회사 사업에는 애초에 적용되지 않는 질문 (예: 공공사업을 안 하는 회사의 D2-7)
+evidence에는 IR에서 찾은 구체적 문구·수치·고객명을 인용해 1~2문장으로 쓰고 pageRefs를 다세요. "근거 없음"은 evidence에 "자료에 없음"이라고 적되, 어떤 근거가 있어야 하는지도 한 마디 덧붙이세요.
+
+[techAdvantage 세부 질문]
+${renderChecks("techAdvantage")}
+
+[tractionCertainty 세부 질문]
+${renderChecks("tractionCertainty")}
+
+점수 산정 기준(techAdvantage, tractionCertainty): 해당 없음을 뺀 질문들에서 확인됨=1, 부분=0.5, 근거 없음=0으로 환산한 비율을 기준선으로 삼고, 질문의 중요도(예: 트랙션에서 확정 매출 여부 D2-1·D2-2, 기술에서 제3자 검증 D1-2·양산 근거 D1-5가 더 무거움)에 따라 ±15점 이내로 조정하세요. 특히 D2-1에서 의향서·MOU를 확정 매출처럼 묶어 쓴 경우는 트랙션 점수를 크게 낮추세요.
+concentrationRisk, valuationFit, financialHealth는 checks를 빈 배열로 두고 rationale에 근거를 쓰세요.
+
+[판단 불가 처리 — determinable]
+IR(과 산업 일반지식)만으로 어떤 기준을 판단할 정보가 아예 없으면 determinable=false로 두고 score=0, rationale에 "무엇이 없어 판단 불가인지"를 쓰세요. 판단 불가인 기준은 종합 점수에서 제외되고 나머지 기준으로 재계산됩니다 — 정보가 없다고 감점하지 않기 위해서입니다. 예: 희망 밸류에이션이 어디에도 없으면 valuationFit은 판단 불가, 재무제표·현금 정보가 전혀 없으면 financialHealth는 판단 불가.
+단, techAdvantage·tractionCertainty는 "검증 가능성·확정도"를 보는 기준이므로, IR에 기술/실적 서술은 있는데 근거가 빈약한 경우는 판단 불가가 아니라 낮은 점수(근거 없음/부분)로 평가해야 합니다. 이 둘이 판단 불가가 되는 것은 기술이나 실적에 대한 서술 자체가 사실상 전혀 없을 때뿐입니다.
 
 [핵심 원칙 — 자료 완성도와 사업 매력도를 혼동하지 마세요]
-IR 자료에 특정 정보(재무 상세, 팀 이력 등)가 빠져 있다는 것과 그 사업 자체가 매력적이지 않다는 것은 전혀 다른 문제입니다. 자료 완성도는 이미 categoryScores/totalScore에서 별도로 평가되므로, 여기서는 "자료에 없어서" 점수를 깎지 마세요. 대신 제시된 정보와 해당 산업에 대한 일반 지식을 바탕으로 사업의 본질 — 시장 기회의 크기와 타이밍, 비즈니스 모델의 구조적 타당성, 팀의 역량과 전문성, 제품/기술의 실제 경쟁력, 트랙션이 보여주는 방향성 — 을 적극적으로 추론해서 판단하세요.
-- 자료에 없는 정보는 "확인이 필요한 부분"으로 다루세요(concerns에 "~는 자료에 없어 확인 필요"로 남기거나 reviewerNextSteps에 확인 행동으로 연결) — 그 공백 자체를 점수 감점 사유로 쓰지 마세요.
-- 점수를 낮게 줄 때는 반드시 사업 자체의 구조적 약점 때문이어야 합니다(예: 시장이 너무 작음, 차별화가 희박함, 경제성이 근본적으로 성립하지 않음, 이미 알려진 실패 패턴과 유사함). "자료가 부실해서 판단이 어렵다"는 그 자체로 투자 매력도를 깎는 이유가 될 수 없습니다.
-- 정말로 정보가 부족해서 사업 자체를 판단하기 어려운 경우, 억지로 낮은 점수를 주지 말고 중간값 근처로 주면서 summary에 "확인되지 않은 부분이 많아 판단이 제한적"이라고 솔직히 쓰세요.
+자료 완성도는 이미 categoryScores/totalScore에서 별도로 평가됩니다. 위 TOP2 외의 기준에서는 "자료에 없어서" 점수를 깎지 말고 판단 불가로 처리하세요. 점수를 낮게 줄 때는 구조적 약점(고객 쏠림, 자본잠식, 안전마진 부족, 확정되지 않은 매출 등)이 자료에서 드러났을 때여야 합니다.
+- 자료에 없는 정보는 "확인이 필요한 부분"으로 다루세요(concerns 또는 reviewerNextSteps에 확인 행동으로 연결).
 
-overallScore는 5개 기준의 단순 평균이 아니라 심사역의 종합 판단으로 산정하고, summary에는 "투자를 적극 검토할 만하다/신중해야 한다" 같은 명확한 투자 관점 총평을 쓰세요. strongPoints와 concerns에도 페이지 근거를 반드시 다세요.
+[점수 해석 시 주의]
+- 매출·손익 추정치의 현실성, 회수(Exit) 경로의 현실성은 이 진단의 기준이 아닙니다. 이 둘을 점수에 반영하지 마세요.
 
-주의: 이 기준들은 기본값입니다 — 실제 안다아시아벤처스가 투자심사에서 중시하는 포인트(과거 투심보고서 기반)와 다를 수 있음을 유의하고, 일반적인 VC 심사 관점에서 신중하게 평가하세요.
+[점수로 매기지 않는 항목 — reviewerNextSteps의 확인 질문으로만]
+다음은 IR만으로 판단할 수 없으므로 점수화하지 말고, 해당 사항이 있을 법하면 reviewerNextSteps에 "심사역이 직접 확인할 질문"으로 넣으세요: 구주 매각 여부·가격, 특수관계자 거래, 이해관계인(기존 투자자·주주) 구성, 우리 펀드 재원·조건 적합성, 대표자 성향·평판, 재무실사에서 볼 항목(미청구 매출, 채권 회수, 차입).
+
+summary에는 "투자를 적극 검토할 만하다/신중해야 한다" 같은 명확한 투자 관점 총평을 쓰되, TOP2의 verdict 결과(무엇이 확인되고 무엇이 비어 있는지)를 반드시 반영하세요. strongPoints와 concerns에도 페이지 근거를 반드시 다세요. concerns에는 실제 투심에서 지적될 만한 쟁점(예: 의향서 위주 트랙션, 단일 고객 쏠림, 양산 검증 부재)을 headline으로 구체적으로 짚으세요.
 
 [reviewerNextSteps — 심사역이 직접 취할 다음 행동]
-actionPlan(스타트업이 자료를 보강하도록 주는 조언)과는 청자가 다릅니다. 여기서는 "우리 심사역이 이 딜을 더 진행하기 위해 지금 바로 할 수 있는 행동"을 제시하세요. 예: "창업자에게 전화해 팀의 과거 실행 경험을 구체적으로 확인한다", "레퍼런스체크로 언급된 파트너십의 실재 여부를 확인한다", "재무모델/번레이트 자료를 추가로 요청한다", "경쟁사 A, B와의 포지셔닝 차이를 직접 질문한다". "자료에 ~를 추가하라" 같은 자료 보강형 조언은 쓰지 마세요(그건 actionPlan의 역할입니다). 3~5개, 우선순위(priority)와 근거 페이지(해당되는 경우)를 포함하세요.`;
+actionPlan(스타트업이 자료를 보강하도록 주는 조언)과는 청자가 다릅니다. 여기서는 "우리 심사역이 이 딜을 더 진행하기 위해 지금 바로 할 수 있는 행동"을 제시하세요. 특히 TOP2에서 "부분"·"근거 없음"으로 나온 질문은 심사역이 대표에게 던질 구체적 질문이나 요청 자료로 바꿔 넣으세요(예: "LG화학 계약 매출의 실제 규모와 갱신 이력을 대표에게 확인한다"). "자료에 ~를 추가하라" 같은 자료 보강형 조언은 쓰지 마세요. 3~6개, 우선순위(priority)와 근거 페이지(해당되는 경우)를 포함하세요.`;
 }
 
 export function buildSystemPrompt(persona: Persona, domain: Domain, mode: "external" | "internal" = "external"): string {

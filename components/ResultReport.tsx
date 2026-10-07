@@ -59,8 +59,8 @@ function Hero({ report, internalMode }: { report: EvaluationReport; internalMode
           </div>
           <div className="text-right">
             <div className="text-4xl font-bold text-accent-soft">
-              {ia.overallScore}
-              <span className="text-lg text-muted">/100</span>
+              {ia.overallScore ?? "—"}
+              {ia.overallScore != null && <span className="text-lg text-muted">/100</span>}
             </div>
             <p className="text-xs text-muted">투자 매력도</p>
           </div>
