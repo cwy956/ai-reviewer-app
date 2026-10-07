@@ -187,12 +187,21 @@ function CriteriaDetail({ criteria }: { criteria: InvestmentCriterionAssessment[
           const weight = CRITERION_BY_ID[c.criterion]?.weight;
           return (
             <div key={c.criterion} className="py-3 first:pt-0 last:pb-0">
-              <p className="text-sm">
-                <span className="font-medium text-foreground">{shortLabel(c)}</span>
-                {weight != null && <span className="ml-1.5 text-[11px] text-muted">{weight}%</span>}
-                <span className="ml-2 text-xs text-muted">{undeterminable ? "판단 불가" : `${c.score}점`}</span>
-              </p>
-              <p className="mt-0.5 text-xs font-medium text-foreground/80">{criterionHeadline(c)}</p>
+              <div className="flex items-center gap-3">
+                <div className="w-28 shrink-0 sm:w-36">
+                  <p className="text-sm font-semibold text-foreground">{shortLabel(c)}</p>
+                  {weight != null && <p className="text-[11px] text-muted">가중치 {weight}%</p>}
+                </div>
+                <div className="h-3 min-w-0 flex-1 rounded-full bg-panel-border">
+                  {!undeterminable && (
+                    <div className={`h-3 rounded-full ${scoreTone(c.score).bar}`} style={{ width: `${c.score}%` }} />
+                  )}
+                </div>
+                <div className={`w-14 shrink-0 text-right text-2xl font-bold leading-none ${undeterminable ? "text-sm text-muted" : scoreTone(c.score).text}`}>
+                  {undeterminable ? "판단 불가" : c.score}
+                </div>
+              </div>
+              <p className="mt-2 text-sm font-medium text-foreground/90">{criterionHeadline(c)}</p>
               <div className="mt-1.5 text-xs leading-relaxed text-muted">
                 <Lines text={c.rationale} className="space-y-0.5" />
                 <PageBadges pageRefs={c.pageRefs} />
