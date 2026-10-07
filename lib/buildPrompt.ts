@@ -117,10 +117,10 @@ IR(과 산업 일반지식)만으로 어떤 기준을 판단할 정보가 아예
 다음은 IR만으로 판단할 수 없으므로 점수화하지 말고, 해당 사항이 있을 법하면 reviewerNextSteps에 "심사역이 직접 확인할 질문"으로 넣으세요: 구주 매각 여부·가격, 특수관계자 거래, 이해관계인(기존 투자자·주주) 구성, 우리 펀드 재원·조건 적합성, 대표자 성향·평판, 재무 상태·재무실사에서 볼 항목(현금·런웨이, 적자 규모, 미청구 매출, 채권 회수, 차입) — 재무는 점수 기준에서 제외했으므로 여기서만 다룸.
 
 [분량 — 심사역이 5초 안에 훑어야 합니다]
-- summary: 2문장 이내, 150자 안팎. 첫 문장은 투자 관점 결론(예: "적극 검토할 만한 딜"), 둘째 문장은 가장 큰 근거 하나와 가장 큰 쟁점 하나.
-- 각 criteria의 headline: 35자 이내 한 줄. rationale: 2~3문장, 핵심 수치·고객명·페이지만(나열·장황한 서술 금지).
-- strongPoints·concerns: 각각 최대 3개. headline은 12자 안팎, text는 한 문장(60자 안팎).
-- reviewerNextSteps: 최대 4개. title은 20자 이내, detail은 한 문장.
+- summary: 개조식 2~3줄(줄바꿈 구분). 첫 줄은 가장 강한 근거, 다음 줄은 두 번째 근거, 마지막 줄은 가장 큰 쟁점.
+- 각 criteria의 headline: 35자 이내 한 줄. rationale: 개조식 2~3줄, 핵심 수치·고객명·페이지만(나열·장황한 서술 금지).
+- strongPoints·concerns: 각각 최대 3개. headline은 12자 안팎, text는 개조식 한 줄(45자 안팎).
+- reviewerNextSteps: 최대 4개. title은 20자 이내, detail은 개조식 한 줄.
 
 summary에는 "투자를 적극 검토할 만하다/신중해야 한다" 같은 명확한 투자 관점 총평을 쓰되, TOP2(기술·트랙션)에서 무엇이 확인되고 무엇이 비어 있는지를 반드시 반영하세요. strongPoints와 concerns에도 페이지 근거를 반드시 다세요. concerns에는 실제 투심에서 지적될 만한 쟁점(예: 의향서 위주 트랙션, 단일 고객 쏠림, 양산 검증 부재)을 headline으로 구체적으로 짚으세요.
 
@@ -143,6 +143,15 @@ ${renderIndustryFitInstructions(domain)}
 - companySnapshot은 바쁜 심사역이 다른 모든 내용보다 먼저 읽는 한눈에 보기용 문장입니다. 평가·판단 언어("자료가 부족하다", "매력적이다" 등)를 섞지 말고, 이 회사가 무엇을 하는 회사인지 사실만 간결하게 전달하세요.
 - strengths, improvements, industryFit.strongPoints/concerns, investmentAttractiveness.strongPoints/concerns의 각 항목은 반드시 headline(10~20자, 핵심만 담은 짧은 라벨)과 text(이를 뒷받침하는 1문장)로 나눠 쓰세요. headline만 훑어도 전체 내용의 요지가 파악되도록 작성하세요 — "팀 정보가 부족합니다" 같은 두루뭉술한 headline 말고 "창업자 경력 전혀 미기재"처럼 구체적으로 쓰세요.
 - 응답은 반드시 제공된 submit_report 도구를 호출하는 형태로만 출력하세요.
+
+[문체 — 개조식(보고서체). 심사역이 훑어 읽는 글입니다]
+아래 필드는 줄글(문장형)이 아니라 개조식으로 쓰세요: companySnapshot, investmentAttractiveness.summary, criteria의 headline·rationale, strongPoints·concerns의 text, reviewerNextSteps의 detail.
+- 한 줄에 사실 하나만 담고, 줄은 줄바꿈으로 구분하세요. 한 줄은 45자 안팎, 길어도 60자를 넘기지 마세요.
+- 문장 종결어미("~이다", "~한다", "~있다", "~됨")를 쓰지 말고 명사·명사구로 끝내세요. 예: "보유", "제시", "확인 필요", "미기재", "부재", "~로 추정".
+- 좋은 예(summary): "예지보전(PdM)·APM 분야 다수 실명 대기업/공공기관 레퍼런스 보유 (LG에너지솔루션, GS칼텍스 등)\n2025년 80억원 이상 수주 실적 보유, 2026년 BEP 목표 제시\n특허 47건이나 제3자 검증 제한적, 밸류 정보 부재로 판단 불가"
+- 나쁜 예: "원프레딕트는 ~를 보유하고 ~를 제시하는 등 ~한 트랙션을 보여준다. 다만 ~이나 ~하다." 처럼 한 문장에 여러 사실을 이어 붙인 서술.
+- 회사명을 매 줄 반복하지 말고, 수식어·접속어("다만", "또한", "종합적으로")를 빼세요.
+
 ${mode === "internal" ? `\n${renderInvestmentAttractivenessInstructions()}` : ""}`;
 }
 

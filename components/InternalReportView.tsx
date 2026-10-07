@@ -28,6 +28,22 @@ function shortLabel(c: InvestmentCriterionAssessment): string {
   return CRITERION_BY_ID[c.criterion]?.shortLabel ?? c.criterionLabel;
 }
 
+/** 줄바꿈으로 구분된 개조식 글을 한 줄씩 보여줌. 줄바꿈이 없는 예전 평가의 긴 글은 첫 문장만 보여주고 나머지는 접음. */
+function Lines({ text, className = "", bullet = true }: { text: string; className?: string; bullet?: boolean }) {
+  const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length <= 1 && text.length > 110) return <FoldedText text={text} className={className} />;
+  return (
+    <ul className={className}>
+      {lines.map((l, i) => (
+        <li key={i} className="flex gap-1.5">
+          {bullet && <span className="shrink-0 text-muted">·</span>}
+          <span>{l}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** 긴 글(예전 프롬프트로 저장된 총평 등)은 첫 문장만 보여주고 나머지는 접어 둠 — 한눈에 읽히는 게 우선. */
 function FoldedText({ text, className = "", limit = 110 }: { text: string; className?: string; limit?: number }) {
   const [open, setOpen] = useState(false);
@@ -73,7 +89,7 @@ function ScoreHero({ report }: { report: EvaluationReport }) {
           <div className={`text-5xl font-bold leading-none ${tone?.text ?? "text-muted"}`}>{overall ?? "—"}</div>
           <p className="mt-1 text-[11px] text-muted">투자 매력도</p>
         </div>
-        <FoldedText text={ia.summary} className="text-base font-semibold leading-snug text-foreground" />
+        <Lines text={ia.summary} className="space-y-1 text-[15px] font-semibold leading-snug text-foreground" />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-4">
@@ -115,7 +131,7 @@ function PointList({ points, tone }: { points: CitedPoint[]; tone: "good" | "bad
           <span className={`mr-1.5 ${dot}`}>●</span>
           <span className="font-medium text-foreground">{p.headline ?? p.text}</span>
           <PageBadges pageRefs={p.pageRefs} />
-          {p.headline && <p className="ml-4 mt-0.5 text-xs text-muted">{p.text}</p>}
+          {p.headline && <Lines text={p.text} bullet={false} className="ml-4 mt-0.5 text-xs text-muted" />}
         </li>
       ))}
     </ul>
@@ -141,7 +157,7 @@ function NextSteps({ steps, questions }: { steps: ActionItem[]; questions: strin
                 </span>
                 <PageBadges pageRefs={s.pageRefs} />
               </p>
-              <p className="mt-0.5 text-xs text-muted">{s.detail}</p>
+              <Lines text={s.detail} bullet={false} className="mt-0.5 text-xs text-muted" />
             </div>
           </li>
         ))}
@@ -191,10 +207,10 @@ function CriteriaDetail({ criteria }: { criteria: InvestmentCriterionAssessment[
                 </div>
               </button>
               {isOpen && (
-                <p className="ml-5 mt-2 text-xs leading-relaxed text-muted">
-                  {c.rationale}
+                <div className="ml-5 mt-2 text-xs leading-relaxed text-muted">
+                  <Lines text={c.rationale} className="space-y-0.5" />
                   <PageBadges pageRefs={c.pageRefs} />
-                </p>
+                </div>
               )}
             </div>
           );
@@ -220,7 +236,7 @@ export function InternalReportView({
 
   return (
     <div className="space-y-4">
-      {report.companySnapshot && <FoldedText text={report.companySnapshot} className="text-sm leading-relaxed text-foreground/90" limit={120} />}
+      {report.companySnapshot && <Lines text={report.companySnapshot} className="space-y-0.5 text-sm leading-snug text-foreground/90" />}
 
       <ScoreHero report={report} />
 
