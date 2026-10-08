@@ -21,6 +21,8 @@ export function InternalNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-panel-border bg-white/95 backdrop-blur">
+      {/* 안다 CI 초록 띠 */}
+      <div className="h-2 w-full bg-accent" />
       <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-6 px-4">
         <Link href="/internal" aria-label="안다아시아벤처스 홈" className="shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
