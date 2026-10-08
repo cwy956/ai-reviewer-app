@@ -71,23 +71,23 @@ export default function InternalHome() {
 
   return (
     <main className="flex-1">
-      {/* 히어로 */}
-      <section className="bg-gradient-to-br from-accent via-accent to-[#1e3320] text-white">
+      {/* 히어로 — 흰 바탕, 안다 초록 포인트 */}
+      <section className="border-b border-panel-border bg-gradient-to-b from-white to-accent-tint/60">
         <div className="mx-auto max-w-6xl px-4 pb-24 pt-14">
-          <p className="text-sm text-white/70">안다아시아벤처스는</p>
-          <h1 className="mt-2 text-3xl font-bold leading-tight sm:text-4xl">
+          <p className="text-sm font-medium text-accent-soft">안다아시아벤처스는</p>
+          <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground sm:text-4xl">
             AI 심사역과 함께
             <br />
-            들어오는 IR을 빠르게 검토합니다
+            들어오는 IR을 <span className="text-accent">빠르게 검토합니다</span>
           </h1>
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/75">
+          <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted">
             메일과 플랫폼으로 들어온 IR을 자동으로 분류하고, 투자 매력도와 확인할 질문까지 정리해 드려요.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/ir-deals" className="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-white/90">
+            <Link href="/ir-deals" className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-soft">
               IR 딜 보러가기
             </Link>
-            <Link href="/dashboard" className="rounded-lg border border-white/40 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
+            <Link href="/dashboard" className="rounded-lg border border-accent/40 px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent-tint">
               대시보드
             </Link>
           </div>
@@ -104,7 +104,7 @@ export default function InternalHome() {
               className="rounded-xl border border-panel-border bg-panel p-4 shadow-sm transition hover:border-accent-soft/50"
             >
               <p className="text-xs text-muted">{s.label}</p>
-              <p className="mt-1 text-3xl font-bold text-foreground">{s.value ?? "–"}</p>
+              <p className="mt-1 text-3xl font-bold text-accent">{s.value ?? "–"}</p>
             </Link>
           ))}
         </section>

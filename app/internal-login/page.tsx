@@ -37,6 +37,8 @@ function InternalLoginForm() {
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-12">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/anda-ci.svg" alt="ANDA ASIA VENTURES" className="mb-6 h-10 w-auto self-start" />
       <h1 className="mb-2 text-xl font-bold text-accent-soft">안다아시아벤처스 직원 로그인</h1>
       <p className="mb-6 text-sm text-muted">
         메일함 분류·대시보드 등 내부 도구는 직원 전용이에요. 공유받은 비밀번호를 입력해주세요.

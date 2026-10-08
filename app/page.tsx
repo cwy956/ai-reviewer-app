@@ -97,6 +97,8 @@ export default function Home() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12">
       <header className="mb-10 text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/anda-ci.svg" alt="ANDA ASIA VENTURES" className="mx-auto mb-6 h-12 w-auto" />
         <h1 className="text-3xl font-bold text-accent-soft">AI 심사역 IR 평가</h1>
         <p className="mt-3 text-sm font-bold leading-relaxed text-foreground">
           IR을 올려주세요. 심사역이 직접 검토합니다.

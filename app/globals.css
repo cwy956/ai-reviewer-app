@@ -5,11 +5,11 @@
  * 구분선, 카드 — 을 차용하되 색상은 안다 CI 딥그린으로 교체). 앱 전체 기본 테마.
  */
 :root {
-  --background: #f7f8f6;
+  --background: #ffffff;
   --foreground: #1b1f22;
   --panel: #ffffff;
   --panel-border: #e7e9e4;
-  --accent: #2e4b2a;
+  --accent: #304b2a;
   --accent-soft: #3f6339;
   --accent-tint: #e8f0e6;
   --muted: #7c8175;
