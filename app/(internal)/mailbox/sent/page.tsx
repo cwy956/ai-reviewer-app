@@ -53,7 +53,7 @@ export default function SentLogPage() {
           메일 자동 감시가 각 담당자에게 실제로 보낸 이메일 발송 이력이에요. 어떤 메일이 누구에게 언제 갔는지 확인할
           수 있습니다.
         </p>
-        <a href="/dashboard" className="mt-3 inline-block text-xs text-muted underline hover:text-accent-soft">
+        <a href="/internal" className="mt-3 inline-block text-xs text-muted underline hover:text-accent-soft">
           현황 대시보드로
         </a>
       </header>

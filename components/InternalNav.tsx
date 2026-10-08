@@ -4,11 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const MENU: { href: string; label: string; match: (p: string) => boolean }[] = [
-  { href: "/internal", label: "HOME", match: (p) => p === "/internal" },
+  { href: "/internal", label: "HOME", match: (p) => p === "/internal" || p.startsWith("/dashboard") },
   { href: "/ir-deals", label: "IR 딜", match: (p) => p.startsWith("/ir-deals") },
-  { href: "/dashboard", label: "대시보드", match: (p) => p.startsWith("/dashboard") },
   { href: "/mailbox/sent", label: "메일 발송 이력", match: (p) => p.startsWith("/mailbox") },
-  { href: "/onboarding", label: "심사역 관리", match: (p) => p.startsWith("/onboarding") },
+  { href: "/onboarding", label: "담당자 관리", match: (p) => p.startsWith("/onboarding") },
 ];
 
 /** 직원 플랫폼 공통 상단 메뉴 — 흰 바탕에 안다 CI 로고, 일반 홈페이지처럼 어느 화면에서든 한 번에 이동. */
@@ -17,10 +16,10 @@ export function InternalNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-panel-border bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4">
+      <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-6 px-4">
         <Link href="/internal" aria-label="안다아시아벤처스 홈" className="shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/anda-ci.svg" alt="ANDA ASIA VENTURES" className="h-9 w-auto" />
+          <img src="/anda-ci.svg" alt="ANDA ASIA VENTURES" className="h-12 w-auto" />
         </Link>
 
         <nav className="flex min-w-0 items-center gap-1 overflow-x-auto text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -30,7 +29,7 @@ export function InternalNav() {
               <Link
                 key={m.href}
                 href={m.href}
-                className={`relative whitespace-nowrap px-3 py-5 font-medium transition ${
+                className={`relative whitespace-nowrap px-3 py-7 font-medium transition ${
                   active ? "text-accent" : "text-foreground/65 hover:text-accent"
                 }`}
               >

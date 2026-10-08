@@ -3,204 +3,335 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-interface Summary {
-  newIRThisWeek: number;
-  investmentThisWeek: number;
-  adminThisWeek: number;
-  sendFailed7d: number;
-  lastCheckedAt: string | null;
+interface FullMail {
+  msgNum: number;
+  from: string;
+  subject: string;
+  date: string;
+  text: string;
+  attachments: { index: number; filename: string; size: number }[];
 }
 
-interface Deal {
+interface DealLite {
+  source: "mail" | "platform";
   key: string;
   title: string;
   domainLabel: string;
-  date: string | null;
   evaluation: { totalScore: number; investmentAttractivenessScore: number | null } | null;
 }
 
-function scoreColor(score: number): string {
-  return score >= 75 ? "text-good" : score >= 55 ? "text-warn" : "text-bad";
+interface DashboardData {
+  summary: {
+    newIRThisWeek: number;
+    investmentThisWeek: number;
+    adminThisWeek: number;
+    sendFailed7d: number;
+    lastCheckedAt: string | null;
+  };
+  mailHistory: {
+    msgNum: number;
+    subject: string;
+    from: string;
+    receivedAt: string;
+    team: "investment" | "admin" | null;
+    categoryLabel: string;
+    deliveries: { name: string; status: "sent" | "failed" }[];
+  }[];
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+function formatDateTime(iso: string | null): string {
+  if (!iso) return "-";
+  try {
+    return new Date(iso).toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return iso;
+  }
 }
 
-const SHORTCUTS = [
-  { href: "/ir-deals", icon: "📄", title: "IR 딜", desc: "들어온 IR 원문을 보고 AI 평가를 확인해요" },
-  { href: "/dashboard", icon: "📊", title: "대시보드", desc: "이번 주 유입과 이메일 수신 이력을 한눈에 봐요" },
-  { href: "/mailbox/sent", icon: "✉️", title: "메일 발송 이력", desc: "팀별 알림 메일이 잘 나갔는지 확인해요" },
-  { href: "/onboarding", icon: "🧭", title: "심사역 관리", desc: "심사역 평가 관점과 영역별 기준을 설정해요" },
-];
+function scoreTone(score: number): { text: string; bar: string } {
+  if (score >= 75) return { text: "text-good", bar: "bg-good" };
+  if (score >= 55) return { text: "text-warn", bar: "bg-warn" };
+  return { text: "text-bad", bar: "bg-bad" };
+}
+
+function Tag({ children, tone = "accent" }: { children: React.ReactNode; tone?: "accent" | "warn" | "bad" | "good" }) {
+  const toneClass =
+    tone === "warn"
+      ? "bg-warn/10 text-warn"
+      : tone === "bad"
+        ? "bg-bad/10 text-bad"
+        : tone === "good"
+          ? "bg-good/10 text-good"
+          : "bg-accent-tint text-accent-soft";
+  return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${toneClass}`}>{children}</span>;
+}
+
+function StatTile({ label, value, tone, href }: { label: string; value: string | number; tone?: "good" | "bad"; href: string }) {
+  const toneClass = tone === "good" ? "text-good" : tone === "bad" ? "text-bad" : "text-accent";
+  return (
+    <Link href={href} className="rounded-xl border border-panel-border bg-panel p-4 shadow-sm transition hover:border-accent-soft/50">
+      <p className="text-xs text-muted">{label}</p>
+      <p className={`mt-1.5 text-3xl font-bold ${toneClass}`}>{value}</p>
+    </Link>
+  );
+}
+
+function SectionCard({ title, hint, action, children }: { title: string; hint?: string; action?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="rounded-xl border border-panel-border bg-panel p-5 shadow-sm">
+      <div className="mb-4 flex items-baseline justify-between gap-3">
+        <div className="flex items-baseline gap-2">
+          <h2 className="font-semibold">{title}</h2>
+          {hint && <span className="text-xs text-muted">{hint}</span>}
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 export default function InternalHome() {
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [deals, setDeals] = useState<Deal[] | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [deals, setDeals] = useState<DealLite[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [historyTab, setHistoryTab] = useState<"all" | "investment" | "admin">("all");
+  const [selectedMsgNum, setSelectedMsgNum] = useState<number | null>(null);
+  const [fullMailByMsgNum, setFullMailByMsgNum] = useState<Record<number, FullMail>>({});
+  const [fullMailLoading, setFullMailLoading] = useState<number | null>(null);
+  const [fullMailError, setFullMailError] = useState<string | null>(null);
+
   useEffect(() => {
-    Promise.all([
-      fetch("/api/dashboard").then((r) => r.json()),
-      fetch("/api/ir-deals").then((r) => r.json()),
-    ])
-      .then(([dash, list]) => {
+    Promise.all([fetch("/api/dashboard").then((r) => r.json()), fetch("/api/ir-deals").then((r) => r.json())])
+      .then(([dash, irDeals]) => {
         if (dash.error) throw new Error(dash.error);
-        if (list.error) throw new Error(list.error);
-        setSummary(dash.summary);
-        setDeals(list.deals ?? []);
+        setData(dash);
+        setDeals(irDeals.deals ?? []);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오기에 실패했습니다."));
+      .catch((err) => setError(err instanceof Error ? err.message : "불러오기에 실패했습니다."))
+      .finally(() => setLoading(false));
   }, []);
 
-  const recent = (deals ?? []).slice(0, 6);
-  const top = (deals ?? [])
+  async function openMail(msgNum: number) {
+    setSelectedMsgNum(msgNum);
+    setFullMailError(null);
+    if (fullMailByMsgNum[msgNum]) return;
+    setFullMailLoading(msgNum);
+    try {
+      const res = await fetch(`/api/mail/message/${msgNum}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "메일 내용을 불러오지 못했습니다.");
+      setFullMailByMsgNum((prev) => ({ ...prev, [msgNum]: json as FullMail }));
+    } catch (err) {
+      setFullMailError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
+    } finally {
+      setFullMailLoading(null);
+    }
+  }
+
+  const topDeals = deals
     .filter((d) => d.evaluation?.investmentAttractivenessScore != null)
     .sort((a, b) => (b.evaluation!.investmentAttractivenessScore ?? 0) - (a.evaluation!.investmentAttractivenessScore ?? 0))
     .slice(0, 5);
-  const pending = (deals ?? []).filter((d) => !d.evaluation).length;
-
-  const stats = [
-    { label: "이번 주 신규 IR", value: summary?.newIRThisWeek, href: "/ir-deals" },
-    { label: "투자팀 수신", value: summary?.investmentThisWeek, href: "/dashboard" },
-    { label: "관리팀 수신", value: summary?.adminThisWeek, href: "/dashboard" },
-    { label: "평가 대기 IR", value: deals ? pending : undefined, href: "/ir-deals" },
-  ];
 
   return (
     <main className="flex-1">
-      {/* 히어로 — 흰 바탕, 안다 초록 포인트 */}
+      {/* 히어로 — 흰 바탕, 안다 초록 포인트. 서비스 전체(접수·분류·평가)를 한 문장으로 */}
       <section className="border-b border-panel-border bg-gradient-to-b from-white to-accent-tint/60">
-        <div className="mx-auto max-w-6xl px-4 pb-24 pt-14">
-          <p className="text-sm font-medium text-accent-soft">안다아시아벤처스는</p>
+        <div className="mx-auto max-w-6xl px-4 pb-24 pt-12">
+          <p className="text-sm font-medium text-accent-soft">IR 접수부터 투자 검토까지</p>
           <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            AI 심사역과 함께
+            들어오는 IR을 AI가 먼저 읽고,
             <br />
-            들어오는 IR을 <span className="text-accent">빠르게 검토합니다</span>
+            <span className="text-accent">투자 검토에 필요한 것만 정리합니다</span>
           </h1>
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted">
-            메일과 플랫폼으로 들어온 IR을 자동으로 분류하고, 투자 매력도와 확인할 질문까지 정리해 드려요.
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
+            메일과 기업 플랫폼으로 접수된 IR을 자동으로 분류해 담당 팀에 전달하고, 투자 매력도 평가와 대표에게 확인할 질문까지
+            한 화면에서 확인할 수 있어요.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/ir-deals" className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-soft">
-              IR 딜 보러가기
-            </Link>
-            <Link href="/dashboard" className="rounded-lg border border-accent/40 px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent-tint">
-              대시보드
-            </Link>
-          </div>
+          {data && <p className="mt-4 text-xs text-muted">마지막 메일 확인 · {formatDateTime(data.summary.lastCheckedAt)}</p>}
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-4">
-        {/* 요약 타일 — 히어로 위로 겹침 */}
-        <section className="-mt-14 grid grid-cols-2 gap-3 md:grid-cols-4">
-          {stats.map((s) => (
-            <Link
-              key={s.label}
-              href={s.href}
-              className="rounded-xl border border-panel-border bg-panel p-4 shadow-sm transition hover:border-accent-soft/50"
+      <div className="mx-auto max-w-6xl space-y-5 px-4 pb-16">
+        {loading && <p className="-mt-14 text-sm text-muted">불러오는 중...</p>}
+        {error && <p className="-mt-14 rounded-lg border border-bad/30 bg-bad/5 px-4 py-3 text-sm text-bad">{error}</p>}
+
+        {data && (
+          <>
+            {/* 요약 타일 — 히어로 위로 겹침 */}
+            <div className="-mt-14 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <StatTile label="이번 주 신규 IR" value={data.summary.newIRThisWeek} tone="good" href="/ir-deals" />
+              <StatTile label="이번 주 투자팀 수신" value={data.summary.investmentThisWeek} href="/ir-deals" />
+              <StatTile label="이번 주 관리팀 수신" value={data.summary.adminThisWeek} href="/mailbox/sent" />
+              <StatTile
+                label="전달 실패 (7일)"
+                value={data.summary.sendFailed7d}
+                tone={data.summary.sendFailed7d > 0 ? "bad" : undefined}
+                href="/mailbox/sent"
+              />
+            </div>
+
+            {/* 투자 매력도 상위 딜 — 가로 막대 + 점수 */}
+            <SectionCard
+              title="투자 매력도 상위 딜"
+              hint="100점 만점"
+              action={
+                <Link href="/ir-deals?sort=investment" className="text-xs text-accent-soft hover:underline">
+                  전체 보기 →
+                </Link>
+              }
             >
-              <p className="text-xs text-muted">{s.label}</p>
-              <p className="mt-1 text-3xl font-bold text-accent">{s.value ?? "–"}</p>
-            </Link>
-          ))}
-        </section>
+              {topDeals.length === 0 ? (
+                <p className="text-sm text-muted">아직 평가된 딜이 없어요.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {topDeals.map((d, i) => {
+                    const score = d.evaluation!.investmentAttractivenessScore!;
+                    const tone = scoreTone(score);
+                    return (
+                      <li key={d.key}>
+                        <Link
+                          href="/ir-deals?sort=investment"
+                          className="flex items-center gap-3 rounded-md px-1 py-1 hover:bg-accent-tint/40"
+                        >
+                          <span className="w-4 shrink-0 text-xs font-semibold text-muted">{i + 1}</span>
+                          <span className="w-40 min-w-0 shrink-0 sm:w-64">
+                            <span className="block truncate text-sm font-medium">{d.title}</span>
+                            <span className="block truncate text-xs text-muted">{d.domainLabel}</span>
+                          </span>
+                          <span className="h-3 min-w-0 flex-1 rounded-full bg-foreground/20 ring-1 ring-inset ring-foreground/15">
+                            <span className={`block h-3 rounded-full ${tone.bar}`} style={{ width: `${score}%` }} />
+                          </span>
+                          <span className={`w-16 shrink-0 text-right text-2xl font-bold leading-none ${tone.text}`}>
+                            {score}
+                            <span className="ml-0.5 text-xs font-normal text-muted">/100</span>
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </SectionCard>
 
-        {summary && summary.sendFailed7d > 0 && (
-          <Link
-            href="/mailbox/sent"
-            className="mt-3 block rounded-lg border border-bad/30 bg-bad/5 px-4 py-2.5 text-sm text-bad"
-          >
-            ⚠ 최근 7일간 메일 발송 실패 {summary.sendFailed7d}건 — 확인하기
-          </Link>
-        )}
-        {error && <p className="mt-3 rounded-lg border border-bad/30 bg-bad/5 px-4 py-2.5 text-sm text-bad">{error}</p>}
-
-        {/* 바로가기 */}
-        <section className="mt-10">
-          <h2 className="mb-3 text-sm font-semibold text-foreground">바로가기</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {SHORTCUTS.map((s) => (
-              <Link
-                key={s.href}
-                href={s.href}
-                className="group rounded-xl border border-panel-border bg-panel p-5 transition hover:-translate-y-0.5 hover:border-accent-soft/50 hover:shadow-sm"
-              >
-                <span className="text-2xl">{s.icon}</span>
-                <p className="mt-3 font-semibold text-foreground group-hover:text-accent-soft">{s.title}</p>
-                <p className="mt-1 text-xs leading-relaxed text-muted">{s.desc}</p>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* 최근 IR + 투자 매력도 상위 */}
-        <section className="mb-16 mt-10 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-xl border border-panel-border bg-panel p-5">
-            <div className="mb-3 flex items-baseline justify-between">
-              <h2 className="text-sm font-semibold text-foreground">최근 들어온 IR</h2>
-              <Link href="/ir-deals" className="text-xs text-accent-soft hover:underline">전체 보기 →</Link>
-            </div>
-            {!deals ? (
-              <p className="py-6 text-center text-sm text-muted">불러오는 중...</p>
-            ) : recent.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted">아직 들어온 IR이 없어요.</p>
-            ) : (
-              <ul className="divide-y divide-panel-border">
-                {recent.map((d) => (
-                  <li key={d.key}>
-                    <Link href="/ir-deals" className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-accent-soft">
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">{d.title}</span>
-                        <span className="text-xs text-muted">{d.domainLabel} · {formatDate(d.date)}</span>
-                      </span>
-                      <span className="shrink-0 text-xs">
-                        {d.evaluation ? (
-                          <span className="text-muted">평가 완료</span>
-                        ) : (
-                          <span className="rounded-full bg-warn/15 px-2 py-0.5 font-medium text-warn">평가 대기</span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
+            {/* 이메일 수신 이력 */}
+            <SectionCard title="이메일 수신 이력">
+              <div className="mb-3 flex gap-2 text-xs">
+                {(
+                  [
+                    ["all", "전체", data.mailHistory.length],
+                    ["investment", "투자", data.mailHistory.filter((m) => m.team === "investment").length],
+                    ["admin", "관리", data.mailHistory.filter((m) => m.team === "admin").length],
+                  ] as const
+                ).map(([key, label, count]) => (
+                  <button
+                    key={key}
+                    onClick={() => setHistoryTab(key)}
+                    className={`rounded-full px-3 py-1.5 font-medium transition ${
+                      historyTab === key ? "bg-accent text-white" : "bg-black/5 text-muted hover:text-foreground"
+                    }`}
+                  >
+                    {label} {count}
+                  </button>
                 ))}
+              </div>
+              <ul className="max-h-[32rem] space-y-1 overflow-y-auto text-sm">
+                {data.mailHistory
+                  .filter((m) => historyTab === "all" || m.team === historyTab)
+                  .map((m) => (
+                    <li key={m.msgNum} className="border-b border-panel-border/60 last:border-0">
+                      <button
+                        onClick={() => openMail(m.msgNum)}
+                        className="group flex w-full cursor-pointer items-start justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-accent-tint/40"
+                      >
+                        <span className="flex min-w-0 items-start gap-2">
+                          <span className="mt-0.5 shrink-0">
+                            {m.team === "investment" && <Tag>투자</Tag>}
+                            {m.team === "admin" && <Tag tone="warn">관리</Tag>}
+                            {m.team === null && <Tag tone="bad">스팸</Tag>}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate transition-colors group-hover:text-accent-soft group-hover:underline">
+                              {m.subject}
+                            </span>
+                            <span className="block truncate text-xs text-muted">
+                              {m.from} · {m.categoryLabel}
+                              {m.deliveries.length > 0 && (
+                                <>
+                                  {" "}
+                                  · 전달 {m.deliveries.map((d) => (d.status === "sent" ? d.name : `${d.name}(실패)`)).join(", ")}
+                                </>
+                              )}
+                            </span>
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-xs text-muted">{formatDateTime(m.receivedAt)}</span>
+                      </button>
+                    </li>
+                  ))}
+                {data.mailHistory.length === 0 && <li className="py-2 text-muted">아직 수신 기록이 없어요.</li>}
               </ul>
-            )}
-          </div>
-
-          <div className="rounded-xl border border-panel-border bg-panel p-5">
-            <div className="mb-3 flex items-baseline justify-between">
-              <h2 className="text-sm font-semibold text-foreground">투자 매력도 상위 딜</h2>
-              <Link href="/ir-deals?sort=investment" className="text-xs text-accent-soft hover:underline">전체 보기 →</Link>
-            </div>
-            {!deals ? (
-              <p className="py-6 text-center text-sm text-muted">불러오는 중...</p>
-            ) : top.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted">투자 매력도가 평가된 딜이 아직 없어요.</p>
-            ) : (
-              <ol className="divide-y divide-panel-border">
-                {top.map((d, i) => (
-                  <li key={d.key}>
-                    <Link href="/ir-deals?sort=investment" className="flex items-center gap-3 py-2.5 text-sm hover:text-accent-soft">
-                      <span className="w-4 text-xs font-semibold text-muted">{i + 1}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{d.title}</span>
-                        <span className="text-xs text-muted">{d.domainLabel}</span>
-                      </span>
-                      <span className={`text-xl font-bold ${scoreColor(d.evaluation!.investmentAttractivenessScore!)}`}>
-                        {d.evaluation!.investmentAttractivenessScore}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-        </section>
+            </SectionCard>
+          </>
+        )}
       </div>
+
+      {selectedMsgNum !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSelectedMsgNum(null)}>
+          <div
+            className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-xl border border-panel-border bg-panel p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {fullMailLoading === selectedMsgNum && <p className="text-sm text-muted">불러오는 중...</p>}
+            {fullMailError && fullMailLoading !== selectedMsgNum && !fullMailByMsgNum[selectedMsgNum] && (
+              <p className="text-sm text-bad">{fullMailError}</p>
+            )}
+            {fullMailByMsgNum[selectedMsgNum] && (
+              <>
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground">{fullMailByMsgNum[selectedMsgNum].subject}</h3>
+                    <p className="mt-1 text-xs text-muted">{fullMailByMsgNum[selectedMsgNum].from}</p>
+                    <p className="text-xs text-muted">{formatDateTime(fullMailByMsgNum[selectedMsgNum].date)}</p>
+                  </div>
+                  <button onClick={() => setSelectedMsgNum(null)} className="shrink-0 text-sm text-muted hover:text-foreground">
+                    닫기
+                  </button>
+                </div>
+
+                {fullMailByMsgNum[selectedMsgNum].attachments.length > 0 && (
+                  <div className="mb-4 space-y-2">
+                    <p className="text-xs font-medium text-muted">첨부 자료</p>
+                    <ul className="space-y-1.5">
+                      {fullMailByMsgNum[selectedMsgNum].attachments.map((a) => (
+                        <li key={a.index} className="flex items-center justify-between gap-3 rounded-lg border border-panel-border px-3 py-2 text-sm">
+                          <span className="truncate">
+                            📎 {a.filename} <span className="text-xs text-muted">({(a.size / 1024).toFixed(0)}KB)</span>
+                          </span>
+                          <a
+                            href={`/api/mail/message/${selectedMsgNum}/attachment/${a.index}`}
+                            download={a.filename}
+                            className="shrink-0 text-xs font-medium text-accent-soft hover:underline"
+                          >
+                            다운로드
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <p className="whitespace-pre-wrap text-sm text-foreground/90">
+                  {fullMailByMsgNum[selectedMsgNum].text || "(본문 텍스트가 없습니다 — 첨부파일 또는 서식만 있는 메일일 수 있어요)"}
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

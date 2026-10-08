@@ -278,7 +278,7 @@ export default function IrDealsPage() {
             매일 자동으로 평가되고, 플랫폼 제출은 그 자리에서 바로 평가돼요.
           </p>
           <div className="mt-3 flex gap-4 text-xs">
-            <a href="/dashboard" className="text-muted underline hover:text-accent-soft">
+            <a href="/internal" className="text-muted underline hover:text-accent-soft">
               현황 대시보드
             </a>
             <a href="/mailbox/sent" className="text-muted underline hover:text-accent-soft">
