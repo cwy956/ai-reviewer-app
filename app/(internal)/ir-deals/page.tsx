@@ -240,6 +240,8 @@ export default function IrDealsPage() {
   }
 
   function closeModal() {
+    // 홈·알림 메일의 링크(?open=…)로 들어온 경우 팝업을 닫으면 주소에서도 지워서, 새로고침해도 다시 열리지 않게 함
+    if (new URLSearchParams(window.location.search).has("open")) window.history.replaceState(null, "", window.location.pathname);
     setSelected(null);
     setPdfPreviewFromBase64(undefined);
   }
@@ -289,7 +291,7 @@ export default function IrDealsPage() {
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-5xl px-4 py-12">
         <header className="mb-8">
-          <h1 className="text-2xl font-bold text-accent-soft">IR 딜 목록</h1>
+          <h1 className="text-2xl font-bold text-accent-soft">딜 리스트</h1>
           <p className="mt-2 text-sm text-muted">
             공용 메일함으로 온 IR과 공개 평가 페이지에 스타트업이 직접 올린 IR을 한 곳에서 열람해요. 새 메일은
             매일 자동으로 평가되고, 플랫폼 제출은 그 자리에서 바로 평가돼요.

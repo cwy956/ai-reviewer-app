@@ -191,7 +191,7 @@ export default function InternalHome() {
                   <ul className="divide-y divide-panel-border">
                     {recent.map((d) => (
                       <li key={d.key}>
-                        <Link href="/ir-deals" className="flex items-center justify-between gap-3 py-3 hover:text-accent-soft">
+                        <Link href={`/ir-deals?open=${encodeURIComponent(d.key)}`} className="flex items-center justify-between gap-3 py-3 hover:text-accent-soft">
                           <span className="min-w-0">
                             <span className="block truncate font-medium">{d.title}</span>
                             <span className="block truncate text-xs text-muted">
@@ -227,17 +227,15 @@ export default function InternalHome() {
                     {ranked.map((d, i) => {
                       const score = scoreOf(d)!;
                       const legacy = !d.evaluation?.investmentVerdict; // 새 기준 결론 라벨이 없으면 예전 기준 평가
-                      const light = /haiku/i.test(d.evaluation?.evaluatedModel ?? ""); // 작은 모델로 일괄 처리한 간이 평가
                       return (
                         <li key={d.key}>
-                          <Link href="/ir-deals?sort=investment" className="flex items-center gap-3 py-3 hover:text-accent-soft">
+                          <Link href={`/ir-deals?open=${encodeURIComponent(d.key)}`} className="flex items-center gap-3 py-3 hover:text-accent-soft">
                             <span className="w-6 shrink-0 text-xs font-semibold text-muted">{i + 1}</span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate font-medium">{d.title}</span>
                               <span className="block truncate text-xs text-muted">{d.domainLabel}</span>
                             </span>
                             {legacy && <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-[11px] text-muted">이전 기준</span>}
-                            {light && <span className="shrink-0 rounded-full bg-accent-tint px-2 py-0.5 text-[11px] text-accent-soft">간이 평가</span>}
                             <span className={`w-10 shrink-0 text-right text-2xl font-bold leading-none ${scoreTone(score).text}`}>{score}</span>
                           </Link>
                         </li>
@@ -245,7 +243,7 @@ export default function InternalHome() {
                     })}
                     {notEvaluated.map((d) => (
                       <li key={d.key}>
-                        <Link href="/ir-deals" className="flex items-center gap-3 py-3 hover:text-accent-soft">
+                        <Link href={`/ir-deals?open=${encodeURIComponent(d.key)}`} className="flex items-center gap-3 py-3 hover:text-accent-soft">
                           <span className="w-6 shrink-0 text-xs text-muted">–</span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium text-foreground/80">{d.title}</span>

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const MENU: { href: string; label: string; match: (p: string) => boolean }[] = [
   { href: "/internal", label: "HOME", match: (p) => p === "/internal" || p.startsWith("/dashboard") },
-  { href: "/ir-deals", label: "IR 딜", match: (p) => p.startsWith("/ir-deals") },
+  { href: "/ir-deals", label: "딜 리스트", match: (p) => p.startsWith("/ir-deals") },
   { href: "/mailbox/sent", label: "메일 발송 이력", match: (p) => p.startsWith("/mailbox") },
   { href: "/onboarding", label: "담당자 관리", match: (p) => p.startsWith("/onboarding") },
 ];
