@@ -19,7 +19,7 @@ interface DealLite {
   title: string;
   domainLabel: string;
   date: string | null;
-  evaluation: { totalScore: number; investmentAttractivenessScore: number | null } | null;
+  evaluation: { totalScore: number; investmentAttractivenessScore: number | null; investmentVerdict?: string | null } | null;
 }
 
 interface DashboardData {
@@ -139,10 +139,19 @@ export default function InternalHome() {
   }
 
   const recent = deals.slice(0, 6);
-  const topDeals = deals
-    .filter((d) => d.evaluation?.investmentAttractivenessScore != null)
-    .sort((a, b) => (b.evaluation!.investmentAttractivenessScore ?? 0) - (a.evaluation!.investmentAttractivenessScore ?? 0))
-    .slice(0, 5);
+  // 같은 회사가 여러 번 들어온 경우(재제출·재평가)는 가장 높은 점수 한 건만 — 순위에 같은 회사가 반복되지 않게
+  const scoreOf = (d: DealLite) => d.evaluation?.investmentAttractivenessScore ?? null;
+  const companyKey = (d: DealLite) =>
+    d.title.split("|")[0].toLowerCase().replace(/㈜|\(주\)|주식회사/g, "").replace(/[\s()\-_.,·]/g, "");
+  const bestByCompany = new Map<string, DealLite>();
+  for (const d of deals) {
+    const k = companyKey(d) || d.key;
+    const cur = bestByCompany.get(k);
+    if (!cur || (scoreOf(d) ?? -1) > (scoreOf(cur) ?? -1)) bestByCompany.set(k, d);
+  }
+  const unique = Array.from(bestByCompany.values());
+  const ranked = unique.filter((d) => scoreOf(d) != null).sort((a, b) => scoreOf(b)! - scoreOf(a)!);
+  const notEvaluated = unique.filter((d) => scoreOf(d) == null);
 
   return (
     <main className="flex-1">
@@ -202,32 +211,47 @@ export default function InternalHome() {
               </SectionCard>
 
               <SectionCard
-                title="투자 매력도 상위 딜"
+                title="투자 매력도 순위"
+                hint={`점수 높은 순 · 평가 ${ranked.length}건`}
                 action={
                   <Link href="/ir-deals?sort=investment" className="text-xs text-accent-soft hover:underline">
                     전체 보기 →
                   </Link>
                 }
               >
-                {topDeals.length === 0 ? (
-                  <p className="py-4 text-sm text-muted">아직 평가된 딜이 없어요.</p>
+                {ranked.length + notEvaluated.length === 0 ? (
+                  <p className="py-4 text-sm text-muted">아직 들어온 딜이 없어요.</p>
                 ) : (
-                  <ol className="divide-y divide-panel-border">
-                    {topDeals.map((d, i) => {
-                      const score = d.evaluation!.investmentAttractivenessScore!;
+                  <ol className="max-h-[30rem] divide-y divide-panel-border overflow-y-auto pr-1">
+                    {ranked.map((d, i) => {
+                      const score = scoreOf(d)!;
+                      const legacy = !d.evaluation?.investmentVerdict; // 새 기준 결론 라벨이 없으면 예전 기준 평가
                       return (
                         <li key={d.key}>
                           <Link href="/ir-deals?sort=investment" className="flex items-center gap-3 py-3 hover:text-accent-soft">
-                            <span className="w-4 shrink-0 text-xs font-semibold text-muted">{i + 1}</span>
+                            <span className="w-6 shrink-0 text-xs font-semibold text-muted">{i + 1}</span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate font-medium">{d.title}</span>
                               <span className="block truncate text-xs text-muted">{d.domainLabel}</span>
                             </span>
-                            <span className={`shrink-0 text-2xl font-bold leading-none ${scoreTone(score).text}`}>{score}</span>
+                            {legacy && <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-[11px] text-muted">이전 기준</span>}
+                            <span className={`w-10 shrink-0 text-right text-2xl font-bold leading-none ${scoreTone(score).text}`}>{score}</span>
                           </Link>
                         </li>
                       );
                     })}
+                    {notEvaluated.map((d) => (
+                      <li key={d.key}>
+                        <Link href="/ir-deals" className="flex items-center gap-3 py-3 hover:text-accent-soft">
+                          <span className="w-6 shrink-0 text-xs text-muted">–</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium text-foreground/80">{d.title}</span>
+                            <span className="block truncate text-xs text-muted">{d.domainLabel}</span>
+                          </span>
+                          <span className="shrink-0 rounded-full bg-warn/15 px-2.5 py-1 text-xs font-medium text-warn">평가 전</span>
+                        </Link>
+                      </li>
+                    ))}
                   </ol>
                 )}
               </SectionCard>

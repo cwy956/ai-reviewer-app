@@ -16,6 +16,8 @@ export interface IrEvaluationSummary {
   attachmentFilename: string;
   totalScore: number;
   investmentAttractivenessScore: number | null;
+  /** 새 기준으로 평가된 건만 값이 있음(적극 검토/조건부 검토/보류). 점수만 있고 이 값이 없으면 예전 기준 평가. */
+  investmentVerdict: string | null;
   evaluatedAt: string;
 }
 
@@ -39,6 +41,7 @@ function rowToSummary(row: Record<string, unknown>): IrEvaluationSummary {
     attachmentFilename: row.attachment_filename as string,
     totalScore: report.totalScore,
     investmentAttractivenessScore: report.investmentAttractiveness?.overallScore ?? null,
+    investmentVerdict: report.investmentAttractiveness?.verdict ?? null,
     evaluatedAt: row.evaluated_at as string,
   };
 }

@@ -29,6 +29,7 @@ export interface IrDeal {
   evaluation: {
     totalScore: number;
     investmentAttractivenessScore: number | null;
+    investmentVerdict: string | null;
     evaluatedAt: string;
     personaName: string;
   } | null;
@@ -69,6 +70,7 @@ export async function GET() {
           ? {
               totalScore: evaluation.totalScore,
               investmentAttractivenessScore: evaluation.investmentAttractivenessScore,
+              investmentVerdict: evaluation.investmentVerdict,
               evaluatedAt: evaluation.evaluatedAt,
               personaName: evaluation.personaName,
             }
@@ -92,6 +94,7 @@ export async function GET() {
         evaluation: {
           totalScore: s.totalScore,
           investmentAttractivenessScore: s.investmentAttractivenessScore,
+          investmentVerdict: s.investmentVerdict,
           evaluatedAt: s.evaluatedAt,
           personaName: s.personaName,
         },
