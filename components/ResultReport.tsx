@@ -26,6 +26,46 @@ function CompanySnapshotCard({ companySnapshot }: { companySnapshot?: string }) 
   );
 }
 
+/** 투자기업이 받는 결과 맨 위의 피드백 요약 — 보완하면 좋은 점과 우선 할 일을 먼저 보여줌 (투자 매력도는 내부 전용이라 없음) */
+function CompanyFeedbackSummary({ report }: { report: EvaluationReport }) {
+  const improvements = (report.improvements ?? []).slice(0, 3);
+  const order = { 높음: 0, 중간: 1, 낮음: 2 } as const;
+  const actions = [...(report.actionPlan ?? [])].sort((a, b) => order[a.priority] - order[b.priority]).slice(0, 3);
+  if (improvements.length === 0 && actions.length === 0) return null;
+  return (
+    <div className="rounded-lg border border-accent/30 bg-accent-tint/40 p-5">
+      <p className="text-sm font-semibold text-accent-soft">AI 심사역 피드백</p>
+      <p className="mt-0.5 text-xs text-muted">제출하신 IR을 이렇게 보완하면 심사역이 검토하기 더 좋아요.</p>
+      {improvements.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {improvements.map((p, i) => (
+            <li key={i} className="flex gap-2 text-sm">
+              <span className="mt-0.5 text-accent-soft">●</span>
+              <span>
+                <span className="font-medium text-foreground">{p.headline ?? p.text}</span>
+                {p.headline && <span className="mt-0.5 block text-xs text-muted">{p.text}</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {actions.length > 0 && (
+        <div className="mt-4 border-t border-accent/20 pt-3">
+          <p className="mb-1.5 text-xs font-semibold text-muted">먼저 해보면 좋은 보완</p>
+          <ol className="list-decimal space-y-1.5 pl-5 text-sm">
+            {actions.map((a, i) => (
+              <li key={i}>
+                <span className="font-medium text-foreground">{a.title}</span>
+                <span className="block text-xs text-muted">{a.detail}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ExtractionQualityBanner({ extractionQuality }: { extractionQuality: EvaluationReport["extractionQuality"] }) {
   if (!extractionQuality?.lowConfidence) return null;
   const pct = Math.round(extractionQuality.emptyPageRatio * 100);
@@ -199,6 +239,7 @@ export function ResultReport({
       <CompanySnapshotCard companySnapshot={report.companySnapshot} />
       <Hero report={report} internalMode={internalMode} />
       <ExtractionQualityBanner extractionQuality={report.extractionQuality} />
+      {!internalMode && <CompanyFeedbackSummary report={report} />}
 
       <div className="rounded-lg border border-panel-border bg-panel p-5">
         <RadarScoreChart categoryScores={report.categoryScores} />

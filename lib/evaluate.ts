@@ -106,7 +106,7 @@ const INVESTMENT_TOOL: Anthropic.Tool = {
   input_schema: INVESTMENT_ATTRACTIVENESS_SCHEMA,
 };
 
-function buildReportTool(mode: "external" | "internal"): Anthropic.Tool {
+function buildReportTool(mode: "external" | "internal", includeStoryline = false): Anthropic.Tool {
   const properties: Record<string, unknown> = {
       companyName: {
         type: "string",
@@ -260,7 +260,7 @@ function buildReportTool(mode: "external" | "internal"): Anthropic.Tool {
   industryFitSchema.properties.concerns = { type: "array", items: CITED_POINT_SCHEMA };
 
   // 스토리라인(회사를 소개하는 흐름)은 스타트업용 피드백이라 내부 심사역 평가에서는 생성하지 않음
-  if (mode === "internal") delete properties.storyline;
+  if (mode === "internal" && !includeStoryline) delete properties.storyline;
 
   const required = [
     "companyName",
@@ -279,7 +279,7 @@ function buildReportTool(mode: "external" | "internal"): Anthropic.Tool {
     "reviewerQuestions",
   ];
 
-  if (mode === "external") required.splice(required.indexOf("actionPlan"), 0, "storyline");
+  if (mode === "external" || includeStoryline) required.splice(required.indexOf("actionPlan"), 0, "storyline");
 
   return {
     name: "submit_report",
@@ -317,41 +317,39 @@ function fillCategoryLabels(report: EvaluationReport): EvaluationReport {
   };
 }
 
-export async function evaluateIr(
-  persona: Persona,
-  domain: Domain,
-  markedText: string,
-  dealInfo: DealInfo,
-  mode: "external" | "internal" = "external"
-): Promise<EvaluationReport> {
+export interface EvaluateOptions {
+  /** 내부 모드에서도 스토리라인(기업용 피드백 화면에 쓰임)을 생성 — 플랫폼 제출 건이 씀. */
+  includeStoryline?: boolean;
+  /** 투자 매력도 평가를 이 호출에서 하지 않음 — 응답을 먼저 주고 evaluateInvestment를 따로 돌릴 때 사용. */
+  skipInvestment?: boolean;
+}
+
+// Two separate strict tool calls instead of one combined schema. investmentAttractiveness
+// used to be merged into submit_report's schema, but that pushed the strict-mode constrained
+// grammar over Anthropic's compilation size limit ("compiled grammar is too large" 400 —
+// deterministic, so retrying the combined call never helped). Splitting keeps each schema
+// small enough for strict mode, which non-strict mode couldn't reliably replace: without it,
+// the model garbled nested fields (e.g. dumped raw tool-call syntax into a string field).
+function makeToolRunner(persona: Persona, domain: Domain, markedText: string, dealInfo: DealInfo) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY가 설정되어 있지 않습니다. .env.local을 확인하세요.");
   }
-
   const client = new Anthropic({ apiKey });
-  const system = buildSystemPrompt(persona, domain, mode);
+  const system = buildSystemPrompt(persona, domain, "internal");
   const userMessage = buildUserMessage(markedText, dealInfo);
 
-  // Two separate strict tool calls instead of one combined schema. investmentAttractiveness
-  // used to be merged into submit_report's schema, but that pushed the strict-mode constrained
-  // grammar over Anthropic's compilation size limit ("compiled grammar is too large" 400 —
-  // deterministic, so retrying the combined call never helped). Splitting keeps each schema
-  // small enough for strict mode, which non-strict mode couldn't reliably replace: without it,
-  // the model garbled nested fields (e.g. dumped raw tool-call syntax into a string field).
-  const runToolCall = async <T>(tool: Anthropic.Tool, validate?: (v: T) => boolean): Promise<T> => {
+  return async function runToolCall<T>(tool: Anthropic.Tool, systemOverride?: string, validate?: (v: T) => boolean): Promise<T> {
     const attempt = async (): Promise<T> => {
       const response = await client.messages.create({
         model: MODEL,
         max_tokens: 8000,
-        system,
+        system: systemOverride ?? system,
         messages: [{ role: "user", content: userMessage }],
         tools: [tool],
         tool_choice: { type: "tool", name: tool.name },
       });
-      const toolUse = response.content.find(
-        (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
-      );
+      const toolUse = response.content.find((block): block is Anthropic.ToolUseBlock => block.type === "tool_use");
       if (!toolUse) {
         throw new Error("모델이 구조화된 결과를 반환하지 않았습니다.");
       }
@@ -367,40 +365,64 @@ export async function evaluateIr(
       return await attempt();
     }
   };
+}
+
+/** 투자 매력도 진단 — 내부 심사역 전용. 실패하면 undefined(기본 리포트는 이미 성공했으니 버리지 않음). */
+export async function evaluateInvestment(
+  persona: Persona,
+  domain: Domain,
+  markedText: string,
+  dealInfo: DealInfo
+): Promise<InvestmentAttractivenessAssessment | undefined> {
+  const run = makeToolRunner(persona, domain, markedText, dealInfo);
+  const t1 = Date.now();
+  try {
+    const raw = await run<Omit<InvestmentAttractivenessAssessment, "overallScore" | "verdict" | "verdictLine"> & { verdictReason: string; confirmItem: string }>(
+      INVESTMENT_TOOL,
+      undefined,
+      (v) => Array.isArray(v.criteria) && v.criteria.length === INVESTMENT_CRITERIA.length
+    );
+    // 종합 점수는 모델이 아니라 코드가 확정 가중치로 계산 — 판단 불가 기준은 빼고 재정규화.
+    for (const c of raw.criteria) {
+      c.criterionLabel = INVESTMENT_CRITERIA.find((d) => d.id === c.criterion)?.label ?? c.criterionLabel;
+      c.score = c.determinable === false ? 0 : calibrateScore(c.score);
+    }
+    const overallScore = computeWeightedScore(raw.criteria as { criterion: string; score: number; determinable: boolean }[]);
+    console.log(`[evaluateInvestment] 투자 매력도 완료 (${Date.now() - t1}ms)`);
+    return {
+      ...raw,
+      overallScore,
+      // 화면의 점수와 결론 라벨이 어긋나지 않게 라벨은 최종 점수 기준으로 확정
+      ...(overallScore == null ? {} : composeVerdict(overallScore, raw.verdictReason, raw.confirmItem)),
+    };
+  } catch (err) {
+    console.error(`[evaluateInvestment] 투자 매력도 평가 실패 (${Date.now() - t1}ms):`, err);
+    return undefined;
+  }
+}
+
+export async function evaluateIr(
+  persona: Persona,
+  domain: Domain,
+  markedText: string,
+  dealInfo: DealInfo,
+  mode: "external" | "internal" = "external",
+  options: EvaluateOptions = {}
+): Promise<EvaluationReport> {
+  const run = makeToolRunner(persona, domain, markedText, dealInfo);
+  // 기본 리포트는 모드에 맞는 시스템 프롬프트를 씀 (external은 투자 판단 금지 가드레일 포함)
+  const baseSystem = buildSystemPrompt(persona, domain, mode);
 
   const t0 = Date.now();
-  const report = fillCategoryLabels(await runToolCall<EvaluationReport>(buildReportTool(mode)));
+  const report = fillCategoryLabels(await run<EvaluationReport>(buildReportTool(mode, options.includeStoryline), baseSystem));
   report.storyline = report.storyline ?? [];
   // 모델이 후보에 없는 라벨을 지어내는 경우가 있어 해당 영역의 세부 영역 라벨과 정확히 일치할 때만 저장
   if (!domain.subDomains.some((s) => s.label === report.subDomain)) report.subDomain = undefined;
   console.log(`[evaluateIr] 기본 리포트 완료 (${Date.now() - t0}ms)`);
 
-  if (mode === "internal") {
-    // Don't let a slow/failing second call (even after its own retry) throw away the base report
-    // that already succeeded and cost real API time/money — degrade to "no investment axis" and
-    // let the UI (which already renders this field conditionally) show the rest.
-    const t1 = Date.now();
-    try {
-      const raw = await runToolCall<Omit<InvestmentAttractivenessAssessment, "overallScore" | "verdict" | "verdictLine"> & { verdictReason: string; confirmItem: string }>(
-        INVESTMENT_TOOL,
-        (v) => Array.isArray(v.criteria) && v.criteria.length === INVESTMENT_CRITERIA.length
-      );
-      // 종합 점수는 모델이 아니라 코드가 확정 가중치로 계산 — 판단 불가 기준은 빼고 재정규화.
-      for (const c of raw.criteria) {
-        c.criterionLabel = INVESTMENT_CRITERIA.find((d) => d.id === c.criterion)?.label ?? c.criterionLabel;
-        c.score = c.determinable === false ? 0 : calibrateScore(c.score);
-      }
-      const overallScore = computeWeightedScore(raw.criteria as { criterion: string; score: number; determinable: boolean }[]);
-      report.investmentAttractiveness = {
-        ...raw,
-        overallScore,
-        // 화면의 점수와 결론 라벨이 어긋나지 않게 라벨은 최종 점수 기준으로 확정
-        ...(overallScore == null ? {} : composeVerdict(overallScore, raw.verdictReason, raw.confirmItem)),
-      };
-      console.log(`[evaluateIr] 투자 매력도 완료 (${Date.now() - t1}ms)`);
-    } catch (err) {
-      console.error(`[evaluateIr] 투자 매력도 평가 실패, 기본 리포트만 반환 (${Date.now() - t1}ms):`, err);
-    }
+  if (mode === "internal" && !options.skipInvestment) {
+    const ia = await evaluateInvestment(persona, domain, markedText, dealInfo);
+    if (ia) report.investmentAttractiveness = ia;
   }
 
   return sanitizeReport(report);

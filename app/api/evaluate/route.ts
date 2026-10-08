@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { parsePdf, assessExtractionQuality } from "@/lib/parsePdf";
-import { evaluateIr } from "@/lib/evaluate";
+import { evaluateIr, evaluateInvestment } from "@/lib/evaluate";
 import { getDomain, getSubDomain } from "@/lib/domains";
 import { getPersona } from "@/lib/personas";
-import { saveEvaluation } from "@/lib/evaluations/store";
+import { saveEvaluation, updateInvestmentAttractiveness } from "@/lib/evaluations/store";
 import { downloadUpload, deleteUpload, saveSubmissionFile } from "@/lib/irUploads";
 import { sendSubmissionAlert } from "@/lib/mail/submissionAlert";
 import type { DealInfo } from "@/lib/buildPrompt";
@@ -70,7 +70,12 @@ export async function POST(request: Request) {
     }
     const parsed = await parsePdf(buffer);
 
-    const report = await evaluateIr(persona, domain, parsed.markedText, dealInfo, "external");
+    // 메일로 들어온 IR과 같은 평가(내부 모드)로 돌려서 심사역 화면이 두 경로에서 똑같이 나오게 함.
+    // 단 투자 매력도(내부 전용, 약 1분)는 기업에게 응답한 뒤 백그라운드로 계산해서 기업의 대기 시간을 늘리지 않음.
+    const report = await evaluateIr(persona, domain, parsed.markedText, dealInfo, "internal", {
+      includeStoryline: true,
+      skipInvestment: true,
+    });
     report.extractionQuality = assessExtractionQuality(parsed);
     report.submission = {
       companyName,
@@ -85,6 +90,7 @@ export async function POST(request: Request) {
     // fire-and-forget) — a serverless function can be frozen/torn down right after the response
     // is sent, which would silently drop an un-awaited background save. Best-effort: never let a
     // save failure break the response the startup is waiting on.
+    let savedId: number | null = null;
     try {
       const saved = await saveEvaluation({
         source: "platform",
@@ -95,6 +101,7 @@ export async function POST(request: Request) {
         personaName: persona.name,
         report,
       });
+      savedId = saved.id;
       // 심사역이 원문을 열람·재평가할 수 있도록 원본도 보관 (실패해도 평가 결과 반환에는 영향 없음)
       await saveSubmissionFile(saved.id, buffer).catch((err) => console.error("제출 원본 보관 실패:", err));
       // 심사역(투자팀) 전원에게 새 투자 제안 알림 — 실패해도 제출·평가 결과 반환에는 영향 없음
@@ -109,8 +116,23 @@ export async function POST(request: Request) {
       console.error("플랫폼 제출 저장 실패 (평가 결과는 정상 반환됨):", err);
     }
 
+    if (savedId !== null) {
+      const evaluationId = savedId;
+      after(async () => {
+        try {
+          const ia = await evaluateInvestment(persona, domain, parsed.markedText, dealInfo);
+          if (ia) await updateInvestmentAttractiveness(evaluationId, ia);
+        } catch (err) {
+          console.error(`제출 #${evaluationId} 투자 매력도 백그라운드 계산 실패:`, err);
+        }
+      });
+    }
+
+    // 기업에게 보여주는 결과에는 내부 전용 항목(투자 매력도, 제출자 연락처 등)을 넣지 않음
+    const { investmentAttractiveness: _internalOnly, ...companyView } = report;
+    void _internalOnly;
     return NextResponse.json({
-      report,
+      report: companyView,
       meta: { pageCount: parsed.pageCount, truncated: parsed.truncated },
     });
   } catch (err) {

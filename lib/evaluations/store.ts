@@ -1,5 +1,5 @@
 import { getSupabase } from "../db/supabaseClient";
-import type { EvaluationReport, PeerResearchResult } from "../reportSchema";
+import type { EvaluationReport, InvestmentAttractivenessAssessment, PeerResearchResult } from "../reportSchema";
 
 export type EvaluationSource = "mail" | "platform";
 
@@ -110,6 +110,15 @@ export async function updatePeerResearch(id: number, peerResearch: PeerResearchR
   const updatedReport: EvaluationReport = { ...evaluation.report, peerResearch };
   const { error } = await getSupabase().from("ir_evaluations").update({ report: updatedReport }).eq("id", id);
   if (error) throw new Error(`피어 리서치 저장 실패: ${error.message}`);
+}
+
+/** 이미 저장된 평가에 투자 매력도를 합침 — 플랫폼 제출은 기업에게 먼저 응답한 뒤 백그라운드에서 계산하기 때문. */
+export async function updateInvestmentAttractiveness(id: number, ia: InvestmentAttractivenessAssessment): Promise<void> {
+  const evaluation = await getEvaluationById(id);
+  if (!evaluation) throw new Error("평가 결과를 찾을 수 없습니다.");
+  const updatedReport: EvaluationReport = { ...evaluation.report, investmentAttractiveness: ia };
+  const { error } = await getSupabase().from("ir_evaluations").update({ report: updatedReport }).eq("id", id);
+  if (error) throw new Error(`투자 매력도 저장 실패: ${error.message}`);
 }
 
 /** One platform submission's full report, for the detail modal. */
