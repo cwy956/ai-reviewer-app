@@ -6,16 +6,25 @@ export function escapeHtml(s: string): string {
 
 export const ALERT_FOOTER_TEXT = "이 메일은 안다아시아벤처스 AI 심사역 플랫폼이 자동으로 분류·발송한 알림이에요.";
 
+/** 관리자 플랫폼 접속 비밀번호 — 알림을 받는 심사역·관리팀이 링크를 눌러 바로 로그인할 수 있게 링크 옆에 함께 적음. 환경변수가 없으면 생략. */
+function accessPassword(): string | null {
+  return process.env.INTERNAL_ACCESS_PASSWORD?.trim() || null;
+}
+
 /** 눌러서 바로 관리자 플랫폼으로 가는 버튼(이메일 클라이언트 호환을 위해 인라인 스타일 + 표 없이 단순 링크) */
 export function platformButtonHtml(url: string, label = "관리자 플랫폼에서 확인하기"): string {
+  const pw = accessPassword();
   return `<p style="margin:24px 0 8px;">
     <a href="${escapeHtml(url)}" style="display:inline-block;background:#304b2a;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:8px;">${escapeHtml(label)}</a>
   </p>
+  ${pw ? `<p style="margin:0 0 8px;font-size:14px;">접속 비밀번호: <b style="font-family:Consolas,monospace;background:#f1f4ef;padding:2px 8px;border-radius:4px;">${escapeHtml(pw)}</b></p>` : ""}
   <p style="margin:0 0 20px;color:#777;font-size:12px;">버튼이 안 열리면 이 주소를 복사해 주세요: <a href="${escapeHtml(url)}" style="color:#777;">${escapeHtml(url)}</a></p>`;
 }
 
-export function platformLinkText(url: string, label = "관리자 플랫폼에서 확인하기"): string {
-  return `${label}: ${url}`;
+export function platformLinkText(url: string, label = "관리자 플랫폼에서 확인하기", withPassword = true): string {
+  const pw = withPassword ? accessPassword() : null;
+  return `${label}: ${url}${pw ? `
+접속 비밀번호: ${pw}` : ""}`;
 }
 
 export function layoutHtml(inner: string): string {

@@ -63,7 +63,7 @@ function buildEmailBody(mails: ClassifiedMail[], fullByMsgNum: Map<number, FullM
   const sections = mails.map((m, i) => {
     const full = fullByMsgNum.get(m.msgNum);
     const body = full?.text?.trim() || m.snippet || "(본문을 불러오지 못했습니다)";
-    return `[${i + 1}] ${m.subject}\n발신: ${m.from}\n\n${body}\n\n${platformLinkText(linkFor(m), "관리자 플랫폼에서 보기")}`;
+    return `[${i + 1}] ${m.subject}\n발신: ${m.from}\n\n${body}\n\n${platformLinkText(linkFor(m), "관리자 플랫폼에서 보기", false)}`;
   });
   return `공용 메일함에 새 메일이 도착했어요.\n\n${sections.join("\n\n─────────\n\n")}\n\n${platformLinkText(homeLink())}\n\n(${ALERT_FOOTER_TEXT})`;
 }
