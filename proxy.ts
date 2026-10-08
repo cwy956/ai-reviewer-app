@@ -14,6 +14,7 @@ const PROTECTED_PREFIXES = [
   "/api/mail",
   "/api/dashboard",
   "/api/ir-deals",
+  "/api/site-analytics",
 ];
 const AUTH_COOKIE = "internal_auth";
 
@@ -60,5 +61,6 @@ export const config = {
     "/api/mail/:path*",
     "/api/dashboard",
     "/api/ir-deals/:path*",
+    "/api/site-analytics",
   ],
 };

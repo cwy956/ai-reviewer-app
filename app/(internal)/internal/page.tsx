@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { SiteVisitCard } from "@/components/SiteVisitCard";
 
 interface FullMail {
   msgNum: number;
@@ -247,6 +248,9 @@ export default function InternalHome() {
                 )}
               </SectionCard>
             </div>
+
+            {/* 홈페이지 방문 현황 (구글 애널리틱스) */}
+            <SiteVisitCard />
 
             {/* 이메일 수신 이력 */}
             <SectionCard title="이메일 수신 이력">
