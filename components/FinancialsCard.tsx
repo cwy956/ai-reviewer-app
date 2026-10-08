@@ -1,7 +1,7 @@
 import type { FinancialRow, FinancialSummary } from "@/lib/reportSchema";
 
 // IR 자료에 적힌 연도별 매출·영업이익·당기순이익을 묶음 막대그래프로 보여줌. 외부에서 조회한 값이 아니라 IR 기재값이며,
-// 올해 이후(또는 IR이 계획·전망으로 표기한) 값은 '추정'으로 연하게·점선 테두리로 그려 확정 실적과 한눈에 구분되게 함.
+// 올해 이후(또는 IR이 계획·전망으로 표기한) 값은 막대 모양은 같게 두고 연도 라벨에 '추정'을 붙여 구분함.
 
 /** 백만원 단위 숫자를 읽기 쉽게: 1억 이상은 '12.3억', 그 미만은 '35백만'. 적자는 앞에 -. */
 function formatWon(v: number): string {
@@ -52,7 +52,6 @@ function Chart({ rows }: { rows: FinancialRow[] }) {
           const est = r.kind === "추정";
           return (
             <g key={r.year}>
-              {est && <rect x={gx + 2} y={TOP - 14} width={GROUP_W - 4} height={PLOT_H + BOTTOM + 8} rx={6} fill="#a67c2e" opacity={0.06} />}
               {SERIES.map((s, si) => {
                 const v = r[s.key];
                 if (v == null) return null;
@@ -70,9 +69,6 @@ function Chart({ rows }: { rows: FinancialRow[] }) {
                       height={h}
                       rx={2}
                       fill={s.color}
-                      fillOpacity={est ? 0.55 : 1}
-                      stroke={est ? s.color : "none"}
-                      strokeDasharray={est ? "3 2" : undefined}
                     />
                     <text
                       x={cx}
@@ -81,7 +77,6 @@ function Chart({ rows }: { rows: FinancialRow[] }) {
                       fontSize={9.5}
                       fontWeight={600}
                       fill={v < 0 ? "#b4534b" : "#1b1f22"}
-                      fillOpacity={est ? 0.65 : 1}
                     >
                       {formatWon(v)}
                     </text>
@@ -120,12 +115,6 @@ export function FinancialsCard({ financials }: { financials: FinancialSummary })
                 {s.label}
               </span>
             ))}
-            {hasEstimate && (
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block h-2.5 w-2.5 rounded-sm border border-dashed border-muted bg-black/10" />
-                연한 점선 = 추정
-              </span>
-            )}
           </div>
           <Chart rows={rows} />
           <p className="mt-1 text-[11px] leading-snug text-muted">
