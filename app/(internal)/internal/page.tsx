@@ -146,30 +146,14 @@ export default function InternalHome() {
 
   return (
     <main className="flex-1">
-      {/* 히어로 — 흰 바탕, 안다 초록 포인트. 서비스 전체(접수·분류·평가)를 한 문장으로 */}
-      <section className="border-b border-panel-border bg-gradient-to-b from-white to-accent-tint/60">
-        <div className="mx-auto max-w-6xl px-4 pb-24 pt-12">
-          <p className="text-sm font-medium text-accent-soft">투자팀·관리팀 모두를 위한 업무 도우미</p>
-          <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            안다아시아벤처스로 들어오는 모든 문의,
-            <br />
-            <span className="text-accent">AI가 읽고 분류하고 정리합니다</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
-            투자 문의는 투자팀으로, 행정·제휴 문의는 관리팀으로. IR은 투자 매력도와 확인할 질문까지 정리해 드려요.
-          </p>
-          {data && <p className="mt-4 text-xs text-muted">마지막 메일 확인 · {formatDateTime(data.summary.lastCheckedAt)}</p>}
-        </div>
-      </section>
-
-      <div className="mx-auto max-w-6xl space-y-5 px-4 pb-16">
-        {loading && <p className="-mt-14 text-sm text-muted">불러오는 중...</p>}
-        {error && <p className="-mt-14 rounded-lg border border-bad/30 bg-bad/5 px-4 py-3 text-sm text-bad">{error}</p>}
+      <div className="mx-auto max-w-6xl space-y-5 px-4 pb-16 pt-8">
+        {loading && <p className="text-sm text-muted">불러오는 중...</p>}
+        {error && <p className="rounded-lg border border-bad/30 bg-bad/5 px-4 py-3 text-sm text-bad">{error}</p>}
 
         {data && (
           <>
-            {/* 요약 타일 — 히어로 위로 겹침 */}
-            <div className="-mt-14 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {/* 요약 타일 */}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <StatTile label="이번 주 신규 IR" value={data.summary.newIRThisWeek} tone="good" href="/ir-deals" />
               <StatTile label="이번 주 투자팀 전달" value={data.summary.investmentThisWeek} href="/ir-deals" />
               <StatTile label="이번 주 관리팀 전달" value={data.summary.adminThisWeek} href="/mailbox/sent" />
