@@ -17,6 +17,7 @@ interface DealLite {
   key: string;
   title: string;
   domainLabel: string;
+  date: string | null;
   evaluation: { totalScore: number; investmentAttractivenessScore: number | null } | null;
 }
 
@@ -46,6 +47,11 @@ function formatDateTime(iso: string | null): string {
   } catch {
     return iso;
   }
+}
+
+function formatMonthDay(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 function scoreTone(score: number): { text: string; bar: string } {
@@ -131,6 +137,7 @@ export default function InternalHome() {
     }
   }
 
+  const recent = deals.slice(0, 6);
   const topDeals = deals
     .filter((d) => d.evaluation?.investmentAttractivenessScore != null)
     .sort((a, b) => (b.evaluation!.investmentAttractivenessScore ?? 0) - (a.evaluation!.investmentAttractivenessScore ?? 0))
@@ -174,48 +181,73 @@ export default function InternalHome() {
               />
             </div>
 
-            {/* 투자 매력도 상위 딜 — 가로 막대 + 점수 */}
-            <SectionCard
-              title="투자 매력도 상위 딜"
-              hint="100점 만점"
-              action={
-                <Link href="/ir-deals?sort=investment" className="text-xs text-accent-soft hover:underline">
-                  전체 보기 →
-                </Link>
-              }
-            >
-              {topDeals.length === 0 ? (
-                <p className="text-sm text-muted">아직 평가된 딜이 없어요.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {topDeals.map((d, i) => {
-                    const score = d.evaluation!.investmentAttractivenessScore!;
-                    const tone = scoreTone(score);
-                    return (
+            {/* 최근 들어온 IR / 투자 매력도 상위 딜 — 좌우 2단, 점수는 크게 */}
+            <div className="grid gap-5 lg:grid-cols-2">
+              <SectionCard
+                title="최근 들어온 IR"
+                action={
+                  <Link href="/ir-deals" className="text-xs text-accent-soft hover:underline">
+                    전체 보기 →
+                  </Link>
+                }
+              >
+                {recent.length === 0 ? (
+                  <p className="py-4 text-sm text-muted">아직 들어온 IR이 없어요.</p>
+                ) : (
+                  <ul className="divide-y divide-panel-border">
+                    {recent.map((d) => (
                       <li key={d.key}>
-                        <Link
-                          href="/ir-deals?sort=investment"
-                          className="flex items-center gap-3 rounded-md px-1 py-1 hover:bg-accent-tint/40"
-                        >
-                          <span className="w-4 shrink-0 text-xs font-semibold text-muted">{i + 1}</span>
-                          <span className="w-40 min-w-0 shrink-0 sm:w-64">
-                            <span className="block truncate text-sm font-medium">{d.title}</span>
-                            <span className="block truncate text-xs text-muted">{d.domainLabel}</span>
+                        <Link href="/ir-deals" className="flex items-center justify-between gap-3 py-3 hover:text-accent-soft">
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{d.title}</span>
+                            <span className="block truncate text-xs text-muted">
+                              {d.domainLabel}
+                              {d.date ? ` · ${formatMonthDay(d.date)}` : ""}
+                            </span>
                           </span>
-                          <span className="h-3 min-w-0 flex-1 rounded-full bg-foreground/20 ring-1 ring-inset ring-foreground/15">
-                            <span className={`block h-3 rounded-full ${tone.bar}`} style={{ width: `${score}%` }} />
-                          </span>
-                          <span className={`w-16 shrink-0 text-right text-2xl font-bold leading-none ${tone.text}`}>
-                            {score}
-                            <span className="ml-0.5 text-xs font-normal text-muted">/100</span>
-                          </span>
+                          {d.evaluation ? (
+                            <span className="shrink-0 text-xs text-muted">평가 완료</span>
+                          ) : (
+                            <span className="shrink-0 rounded-full bg-warn/15 px-2.5 py-1 text-xs font-medium text-warn">평가 대기</span>
+                          )}
                         </Link>
                       </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </SectionCard>
+                    ))}
+                  </ul>
+                )}
+              </SectionCard>
+
+              <SectionCard
+                title="투자 매력도 상위 딜"
+                action={
+                  <Link href="/ir-deals?sort=investment" className="text-xs text-accent-soft hover:underline">
+                    전체 보기 →
+                  </Link>
+                }
+              >
+                {topDeals.length === 0 ? (
+                  <p className="py-4 text-sm text-muted">아직 평가된 딜이 없어요.</p>
+                ) : (
+                  <ol className="divide-y divide-panel-border">
+                    {topDeals.map((d, i) => {
+                      const score = d.evaluation!.investmentAttractivenessScore!;
+                      return (
+                        <li key={d.key}>
+                          <Link href="/ir-deals?sort=investment" className="flex items-center gap-3 py-3 hover:text-accent-soft">
+                            <span className="w-4 shrink-0 text-xs font-semibold text-muted">{i + 1}</span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate font-medium">{d.title}</span>
+                              <span className="block truncate text-xs text-muted">{d.domainLabel}</span>
+                            </span>
+                            <span className={`shrink-0 text-2xl font-bold leading-none ${scoreTone(score).text}`}>{score}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+              </SectionCard>
+            </div>
 
             {/* 이메일 수신 이력 */}
             <SectionCard title="이메일 수신 이력">
