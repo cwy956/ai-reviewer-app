@@ -109,6 +109,8 @@ export default function IrDealsPage() {
   const [showEvalForm, setShowEvalForm] = useState(false);
   // 플랫폼 제출은 원본이 보관된 건(hasFile)만 열람·재평가 가능 — 보관을 시작하기 전 제출분은 없음.
   const [platformHasFile, setPlatformHasFile] = useState(false);
+  // 플랫폼 제출 건에서 기업이 남긴 연락처·코멘트 (메일 건은 메일 본문이 이 역할)
+  const [submission, setSubmission] = useState<EvaluationReport["submission"] | null>(null);
 
   const [formDomainId, setFormDomainId] = useState("");
   const [formAttachmentIndex, setFormAttachmentIndex] = useState(0);
@@ -168,6 +170,7 @@ export default function IrDealsPage() {
     setCurrentEvaluationId(null);
     setShowEvalForm(deal.source === "mail" && !deal.evaluation);
     setPlatformHasFile(false);
+    setSubmission(null);
     setEvalError(null);
     setFormDomainId(deal.domainId ?? "");
     setFormAttachmentIndex(0);
@@ -182,6 +185,7 @@ export default function IrDealsPage() {
         setCurrentEvaluationId(data.submission.id);
         setFormDomainId(data.submission.domainId);
         setPlatformHasFile(Boolean(data.hasFile));
+        setSubmission(data.submission.report?.submission ?? null);
         if (data.hasFile) setPdfPreviewUrl(`/api/ir-deals/platform/${deal.evaluationId}/file`);
         return;
       }
@@ -441,6 +445,39 @@ export default function IrDealsPage() {
                   )}
                   {selected.source === "platform" && (
                     <>
+                      {submission ? (
+                        <div className="mb-3 space-y-2 rounded-md border border-accent/30 bg-accent-tint/40 p-3 text-sm">
+                          <p className="text-xs font-semibold text-accent-soft">제출 정보 (투자기업 페이지로 접수)</p>
+                          <dl className="grid grid-cols-[4.5rem_1fr] gap-x-3 gap-y-1">
+                            <dt className="text-xs text-muted">회사</dt>
+                            <dd>{submission.companyName}</dd>
+                            <dt className="text-xs text-muted">담당자</dt>
+                            <dd>{submission.contactName}</dd>
+                            <dt className="text-xs text-muted">이메일</dt>
+                            <dd>
+                              <a href={`mailto:${submission.contactEmail}`} className="text-accent-soft hover:underline">
+                                {submission.contactEmail}
+                              </a>
+                            </dd>
+                            {submission.contactPhone && (
+                              <>
+                                <dt className="text-xs text-muted">연락처</dt>
+                                <dd>{submission.contactPhone}</dd>
+                              </>
+                            )}
+                            <dt className="text-xs text-muted">접수</dt>
+                            <dd className="text-muted">{new Date(submission.submittedAt).toLocaleString("ko-KR")}</dd>
+                          </dl>
+                          <div>
+                            <p className="mb-1 text-xs text-muted">코멘트</p>
+                            <p className="whitespace-pre-wrap text-sm text-foreground/90">
+                              {submission.comment || "(남긴 코멘트가 없어요)"}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="mb-3 text-xs text-muted">연락처 입력을 받기 전에 제출된 건이라 제출자 정보가 없어요.</p>
+                      )}
                       <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-panel-border px-3 py-2 text-sm">
                         <span className="truncate">📎 {selected.subtitle}</span>
                         {platformHasFile && (

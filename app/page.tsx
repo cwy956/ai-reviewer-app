@@ -3,7 +3,7 @@
 import { PublicHeader } from "@/components/PublicHeader";
 import { useState } from "react";
 import { DomainPicker } from "@/components/DomainPicker";
-import { DealInfoForm, type DealInfoValue } from "@/components/DealInfoForm";
+import { DealInfoForm, isContactComplete, type DealInfoValue } from "@/components/DealInfoForm";
 import { DisclaimerGate } from "@/components/DisclaimerGate";
 import { UploadPanel } from "@/components/UploadPanel";
 import { ResultReport } from "@/components/ResultReport";
@@ -31,6 +31,7 @@ export default function Home() {
   const [subDomainId, setSubDomainId] = useState<string | null>(null);
   const [dealInfo, setDealInfo] = useState<DealInfoValue>({});
   const [agreed, setAgreed] = useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +65,10 @@ export default function Home() {
           subDomainId: subDomainId || undefined,
           personaId: DEFAULT_PERSONA_ID,
           companyName: dealInfo.companyName || undefined,
+          contactName: dealInfo.contactName || undefined,
+          contactEmail: dealInfo.contactEmail || undefined,
+          contactPhone: dealInfo.contactPhone || undefined,
+          comment: dealInfo.comment || undefined,
           stage: dealInfo.stage || undefined,
           preValuationEok: dealInfo.preValuationEok || undefined,
           askAmountEok: dealInfo.askAmountEok || undefined,
@@ -88,6 +93,7 @@ export default function Home() {
     setSubDomainId(null);
     setDealInfo({});
     setAgreed(false);
+    setPrivacyAgreed(false);
     setFile(null);
     setError(null);
     setReport(null);
@@ -100,17 +106,18 @@ export default function Home() {
     <PublicHeader linkHref="/internal" linkLabel="관리자 페이지 이동" />
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12">
       <header className="mb-10 text-center">
-        <h1 className="text-3xl font-bold text-accent-soft">AI 심사역 IR 평가</h1>
+        <h1 className="text-3xl font-bold text-accent-soft">투자 제안 제출</h1>
         <p className="mt-3 text-sm font-bold leading-relaxed text-foreground">
-          IR을 올려주세요. 심사역이 직접 검토합니다.
+          안다아시아벤처스에 IR 자료를 제출해 주세요. 심사역이 직접 검토합니다.
           <br />
-          AI 분석 결과는 바로 확인할 수 있어요. (투자 자문이 아닌 참고용)
+          제출하시면 AI 심사역이 자료를 바로 분석해 피드백을 드려요.
         </p>
+        <p className="mt-1 text-xs text-muted">AI 피드백은 투자 자문이 아닌 참고용이에요.</p>
       </header>
 
       {!showResult && (
         <div className="mb-8 flex flex-wrap items-center justify-center gap-2 text-xs text-muted">
-          {["영역 선택", "추가 정보", "면책 동의 · 업로드"].map((label, i) => (
+          {["제안 영역", "회사·연락처", "동의 · 제출"].map((label, i) => (
             <div key={label} className="flex items-center gap-2">
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-full ${
@@ -129,9 +136,9 @@ export default function Home() {
       {!showResult && step === 1 && (
         <section className="space-y-6">
           <h2 className="text-lg font-semibold">
-            <span className="mr-2 text-accent-soft">01</span>영역 선택
+            <span className="mr-2 text-accent-soft">01</span>제안 영역 선택
           </h2>
-          <p className="text-sm text-muted">평가 기준이 영역별로 달라지므로, IR이 다루는 기술영역을 골라주세요.</p>
+          <p className="text-sm text-muted">제안하시는 사업의 기술영역을 골라주세요. AI 심사역이 영역에 맞는 기준으로 피드백을 드려요.</p>
           <DomainPicker
             value={domainId}
             subValue={subDomainId}
@@ -153,11 +160,10 @@ export default function Home() {
       {!showResult && step === 2 && (
         <section className="space-y-6">
           <h2 className="text-lg font-semibold">
-            <span className="mr-2 text-accent-soft">02</span>추가 정보{" "}
-            <span className="text-xs font-normal text-muted">(선택)</span>
+            <span className="mr-2 text-accent-soft">02</span>회사·연락처
           </h2>
           <p className="text-sm text-muted">
-            단계 보정과 밸류 근거 평가에 사용돼요. 입력하지 않으면 자료 맥락으로 추정합니다.
+            검토가 진행되면 이 연락처로 연락드려요. 코멘트에는 회사 소개나 제안 배경을 자유롭게 적어 주세요.
           </p>
           <DealInfoForm value={dealInfo} onChange={setDealInfo} />
           <div className="flex gap-3">
@@ -165,8 +171,9 @@ export default function Home() {
               뒤로
             </button>
             <button
+              disabled={!isContactComplete(dealInfo)}
               onClick={() => setStep(3)}
-              className="flex-1 rounded-lg bg-accent px-4 py-3 font-semibold text-white transition hover:bg-accent-soft"
+              className="flex-1 rounded-lg bg-accent px-4 py-3 font-semibold text-white transition enabled:hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               다음
             </button>
@@ -177,10 +184,10 @@ export default function Home() {
       {!showResult && step === 3 && (
         <section className="space-y-6">
           <h2 className="text-lg font-semibold">
-            <span className="mr-2 text-accent-soft">03</span>면책 동의 · IR 업로드
+            <span className="mr-2 text-accent-soft">03</span>동의 · IR 제출
           </h2>
-          <DisclaimerGate checked={agreed} onChange={setAgreed} />
-          {agreed && (
+          <DisclaimerGate checked={agreed} onChange={setAgreed} privacyChecked={privacyAgreed} onPrivacyChange={setPrivacyAgreed} />
+          {agreed && privacyAgreed && (
             <>
               <UploadPanel file={file} onFileChange={setFile} onSubmit={handleSubmit} loading={loading} error={error} />
               <button onClick={() => setStep(2)} className="w-full rounded-lg border border-panel-border py-3 text-sm text-muted">
@@ -194,8 +201,9 @@ export default function Home() {
       {showResult && report && domain && (
         <section>
           <h2 className="mb-6 text-lg font-semibold">
-            <span className="mr-2 text-accent-soft">04</span>평가 결과 — {domain.label}
+            <span className="mr-2 text-accent-soft">04</span>제출 완료 — AI 심사역 피드백 ({domain.label})
           </h2>
+          <p className="mb-6 -mt-3 text-sm text-muted">투자 제안이 접수됐어요. 아래는 AI 심사역이 제출하신 IR을 분석한 피드백이에요.</p>
           <ResultReport
             report={report}
             reviewerAffiliation="안다아시아벤처스"

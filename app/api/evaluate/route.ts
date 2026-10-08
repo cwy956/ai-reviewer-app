@@ -39,6 +39,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "알 수 없는 심사역입니다." }, { status: 400 });
     }
 
+    // 제출자 정보 — 회사명·담당자·이메일은 필수(심사역이 연락할 수단), 연락처·코멘트는 선택
+    const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+    const companyName = str(body.companyName, 100);
+    const contactName = str(body.contactName, 50);
+    const contactEmail = str(body.contactEmail, 120);
+    const contactPhone = str(body.contactPhone, 30);
+    const comment = str(body.comment, 2000);
+    if (!companyName || !contactName || !contactEmail) {
+      return NextResponse.json({ error: "회사명, 담당자 이름, 이메일을 입력해 주세요." }, { status: 400 });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+      return NextResponse.json({ error: "이메일 형식이 올바르지 않습니다." }, { status: 400 });
+    }
+
     const subDomainId = body.subDomainId;
     const subDomain = typeof subDomainId === "string" && subDomainId ? getSubDomain(domainId, subDomainId) : undefined;
 
@@ -57,16 +71,23 @@ export async function POST(request: Request) {
 
     const report = await evaluateIr(persona, domain, parsed.markedText, dealInfo, "external");
     report.extractionQuality = assessExtractionQuality(parsed);
+    report.submission = {
+      companyName,
+      contactName,
+      contactEmail,
+      contactPhone: contactPhone || undefined,
+      comment: comment || undefined,
+      submittedAt: new Date().toISOString(),
+    };
 
     // Every real submission through this page goes into the internal IR list. Awaited (not
     // fire-and-forget) — a serverless function can be frozen/torn down right after the response
     // is sent, which would silently drop an un-awaited background save. Best-effort: never let a
     // save failure break the response the startup is waiting on.
-    const companyName = (typeof body.companyName === "string" && body.companyName) || report.companyName || undefined;
     try {
       const saved = await saveEvaluation({
         source: "platform",
-        companyName,
+        companyName: companyName || report.companyName || undefined,
         attachmentFilename: originalName,
         domainId,
         personaId,

@@ -48,7 +48,7 @@ export function UploadPanel({
             </span>
           ))}
         </div>
-        <p className="mt-4 text-sm text-muted">IR 자료를 확인하고 있어요...</p>
+        <p className="mt-4 text-sm text-muted">제안서를 접수하고 AI 심사역이 검토하고 있어요...</p>
       </div>
     );
   }
@@ -101,7 +101,7 @@ export function UploadPanel({
         disabled={!file}
         className="w-full rounded-lg bg-accent px-4 py-3 font-semibold text-white transition enabled:hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
       >
-        평가 시작
+        투자제안 제출하기
       </button>
 
       <p className="text-center text-xs text-muted">

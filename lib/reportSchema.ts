@@ -119,7 +119,20 @@ export interface PeerResearchResult {
   researchedAt: string;
 }
 
+/** 투자기업 페이지(플랫폼)로 제출할 때 기업이 남긴 연락처·코멘트. 메일 건은 메일 본문이 이 역할을 함. */
+export interface SubmissionInfo {
+  companyName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  /** 심사역에게 전하고 싶은 말 (메일 본문에 해당) */
+  comment?: string;
+  submittedAt: string;
+}
+
 export interface EvaluationReport {
+  /** 플랫폼 제출 건에만 있음 — 심사역이 연락할 때 쓰는 정보. */
+  submission?: SubmissionInfo;
   /** Extracted from the IR material itself — the deal list shouldn't have to fall back to a raw
    * email subject line ("마이 오 마이 투자문의드립니다.") when the deck already states the name. */
   companyName?: string;

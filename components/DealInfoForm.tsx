@@ -2,6 +2,11 @@
 
 export interface DealInfoValue {
   companyName?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  /** 심사역에게 전하고 싶은 말 */
+  comment?: string;
   stage?: string;
   preValuationEok?: number;
   askAmountEok?: number;
@@ -13,6 +18,16 @@ const STAGES = [
   { value: "Series A+", label: "Series A+", desc: "후기 단계 — '증빙' 중심으로 평가" },
 ];
 
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** 필수 항목(회사명·담당자·이메일)이 채워졌는지 */
+export function isContactComplete(v: DealInfoValue): boolean {
+  return Boolean(v.companyName?.trim() && v.contactName?.trim() && v.contactEmail && EMAIL_RE.test(v.contactEmail.trim()));
+}
+
+const fieldClass =
+  "w-full rounded-md border border-panel-border bg-background px-3 py-2 text-sm focus:border-accent focus:outline-none";
+
 export function DealInfoForm({
   value,
   onChange,
@@ -22,15 +37,70 @@ export function DealInfoForm({
 }) {
   return (
     <div className="space-y-5 rounded-lg border border-panel-border bg-panel p-5">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-muted">
+            회사명 <span className="text-bad">*</span>
+          </span>
+          <input
+            type="text"
+            value={value.companyName ?? ""}
+            onChange={(e) => onChange({ ...value, companyName: e.target.value || undefined })}
+            className={fieldClass}
+            placeholder="예: 안다테크"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-muted">
+            담당자 이름 <span className="text-bad">*</span>
+          </span>
+          <input
+            type="text"
+            value={value.contactName ?? ""}
+            onChange={(e) => onChange({ ...value, contactName: e.target.value || undefined })}
+            className={fieldClass}
+            placeholder="예: 홍길동"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-muted">
+            이메일 <span className="text-bad">*</span>
+          </span>
+          <input
+            type="email"
+            value={value.contactEmail ?? ""}
+            onChange={(e) => onChange({ ...value, contactEmail: e.target.value || undefined })}
+            className={fieldClass}
+            placeholder="name@company.com"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-muted">
+            연락처 <span className="text-xs font-normal">(선택)</span>
+          </span>
+          <input
+            type="tel"
+            value={value.contactPhone ?? ""}
+            onChange={(e) => onChange({ ...value, contactPhone: e.target.value || undefined })}
+            className={fieldClass}
+            placeholder="010-0000-0000"
+          />
+        </label>
+      </div>
+
       <label className="block">
-        <span className="mb-1 block text-sm font-medium text-muted">기업명</span>
-        <input
-          type="text"
-          value={value.companyName ?? ""}
-          onChange={(e) => onChange({ ...value, companyName: e.target.value || undefined })}
-          className="w-full rounded-md border border-panel-border bg-background px-3 py-2 text-sm focus:border-accent focus:outline-none"
-          placeholder="예: 안다테크"
+        <span className="mb-1 block text-sm font-medium text-muted">
+          심사역에게 전하고 싶은 말 <span className="text-xs font-normal">(선택)</span>
+        </span>
+        <textarea
+          value={value.comment ?? ""}
+          maxLength={2000}
+          rows={4}
+          onChange={(e) => onChange({ ...value, comment: e.target.value || undefined })}
+          className={fieldClass}
+          placeholder="회사 소개, 이번 투자 제안의 배경, 특별히 봐주셨으면 하는 점 등을 자유롭게 적어 주세요."
         />
+        <span className="mt-1 block text-right text-xs text-muted">{(value.comment ?? "").length} / 2000</span>
       </label>
 
       <div>
@@ -82,7 +152,7 @@ export function DealInfoForm({
         </label>
       </div>
       <p className="text-xs text-muted">
-        모두 선택 입력입니다 — 입력하지 않으면 자료 맥락으로 단계를 추정합니다.
+        투자단계·밸류·투자금액은 선택 입력이에요 — 입력하지 않으면 자료 맥락으로 단계를 추정합니다.
       </p>
     </div>
   );
