@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // stored as a plain cookie (httpOnly + secure) — simple, no user accounts, matches the
 // "internal tool" scope of this app.
 const PROTECTED_PREFIXES = [
+  "/internal",
   "/onboarding",
   "/mailbox",
   "/dashboard",
@@ -50,6 +51,7 @@ export function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
+    "/internal",
     "/onboarding/:path*",
     "/mailbox/:path*",
     "/dashboard",

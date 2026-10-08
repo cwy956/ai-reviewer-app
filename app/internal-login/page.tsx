@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 function InternalLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  const redirect = searchParams.get("redirect") || "/internal";
 
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
