@@ -137,6 +137,18 @@ export default function IrDealsPage() {
     loadDeals();
   }, []);
 
+  // 알림 메일의 링크(/ir-deals?open=…)로 들어오면 해당 딜 팝업을 바로 열어줌
+  const openedFromLink = useRef(false);
+  useEffect(() => {
+    if (openedFromLink.current || deals.length === 0) return;
+    const key = new URLSearchParams(window.location.search).get("open");
+    if (!key) return;
+    const target = deals.find((d) => d.key === key);
+    openedFromLink.current = true;
+    if (target) void openDeal(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deals]);
+
   // 언마운트 시에도 떠 있는 blob URL을 정리 (일반적인 경우는 openDeal에서 매번 교체 전에 직접
   // revoke하지만, 페이지를 벗어나는 경우까지 커버).
   useEffect(() => {

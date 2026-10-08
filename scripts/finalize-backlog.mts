@@ -87,8 +87,7 @@ async function main() {
           `Supabase에 저장했습니다.`
       );
 
-      const appUrl = process.env.APP_BASE_URL || "http://localhost:3000";
-      const emailResult = await sendEmailAlerts(classified, `${appUrl}/mailbox`);
+      const emailResult = await sendEmailAlerts(classified);
       console.log(
         `이메일 알림: ${emailResult.sentGroups}명 성공, ${emailResult.failedGroups}명 실패, ` +
           `담당자 없어 스킵 ${emailResult.skippedNoRecipient}건`

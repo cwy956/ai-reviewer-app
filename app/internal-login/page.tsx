@@ -7,7 +7,9 @@ import { PublicHeader } from "@/components/PublicHeader";
 function InternalLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/internal";
+  // 같은 사이트 안의 경로만 허용 (//evil.com 같은 외부 주소로 보내는 오픈 리다이렉트 방지)
+  const requested = searchParams.get("redirect") || "/internal";
+  const redirect = requested.startsWith("/") && !requested.startsWith("//") ? requested : "/internal";
 
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

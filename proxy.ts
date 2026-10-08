@@ -47,7 +47,7 @@ export async function proxy(req: NextRequest) {
   }
 
   const loginUrl = new URL("/internal-login", req.url);
-  loginUrl.searchParams.set("redirect", pathname);
+  loginUrl.searchParams.set("redirect", pathname + req.nextUrl.search);
   return NextResponse.redirect(loginUrl);
 }
 

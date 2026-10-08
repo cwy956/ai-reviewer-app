@@ -4,6 +4,8 @@ import { groupMailsByRecipient } from "./routing";
 import { sendEmail } from "./sendEmail";
 import { appendSendLog, type SendLogEntry } from "./sendLogStore";
 import { fetchMessageForForwarding, fetchAttachmentContent } from "./client";
+import { dealLink, homeLink } from "../appUrl";
+import { ALERT_FOOTER_TEXT, escapeHtml, layoutHtml, platformButtonHtml, platformLinkText } from "./alertLayout";
 
 interface FullMailForForwarding {
   text: string;
@@ -52,34 +54,22 @@ async function fetchFullMailForForwarding(msgNum: number): Promise<FullMailForFo
   return { text: full.text, html: full.html ? neutralizePopupLinks(full.html) : null, attachments };
 }
 
-function buildEmailBody(
-  mails: ClassifiedMail[],
-  fullByMsgNum: Map<number, FullMailForForwarding>,
-  dashboardUrl?: string
-): string {
+/** 메일 한 통에서 관리자 플랫폼으로 가는 링크 — IR 메일은 해당 딜 팝업이 바로 열리고, 그 외는 홈(수신 이력)으로 */
+function linkFor(m: ClassifiedMail): string {
+  return m.category === "ir" ? dealLink(`mail-${m.msgNum}`) : homeLink();
+}
+
+function buildEmailBody(mails: ClassifiedMail[], fullByMsgNum: Map<number, FullMailForForwarding>): string {
   const sections = mails.map((m, i) => {
     const full = fullByMsgNum.get(m.msgNum);
     const body = full?.text?.trim() || m.snippet || "(본문을 불러오지 못했습니다)";
-    return `[${i + 1}] ${m.subject}\n발신: ${m.from}\n\n${body}`;
+    return `[${i + 1}] ${m.subject}\n발신: ${m.from}\n\n${body}\n\n${platformLinkText(linkFor(m), "관리자 플랫폼에서 보기")}`;
   });
-  const link = dashboardUrl ? `\n\n대시보드에서 전체 보기: ${dashboardUrl}` : "";
-  return `공용 메일함(andaasiavc@andaasiavc.com)에 담당하시는 영역의 새 메일이 도착했습니다.\n\n${sections.join("\n\n─────────\n\n")}${link}\n\n(이 메일은 ANDA 페르소나가 자동으로 분류·발송한 알림입니다.)`;
+  return `공용 메일함에 새 메일이 도착했어요.\n\n${sections.join("\n\n─────────\n\n")}\n\n${platformLinkText(homeLink())}\n\n(${ALERT_FOOTER_TEXT})`;
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-/** Builds an HTML alternative only when at least one mail in the batch actually has an HTML
- * part — otherwise returns null and the plain-text body is used alone. Mail without HTML falls
- * back to its plain text, preformatted, inside the same layout. */
-function buildEmailHtml(
-  mails: ClassifiedMail[],
-  fullByMsgNum: Map<number, FullMailForForwarding>,
-  dashboardUrl?: string
-): string | null {
-  if (!mails.some((m) => fullByMsgNum.get(m.msgNum)?.html)) return null;
-
+/** 링크 버튼을 항상 클릭 가능하게 보여주려고 HTML 본문은 항상 만듦 — 원본에 HTML이 없는 메일은 일반 텍스트를 그대로 넣음. */
+function buildEmailHtml(mails: ClassifiedMail[], fullByMsgNum: Map<number, FullMailForForwarding>): string {
   const sections = mails.map((m, i) => {
     const full = fullByMsgNum.get(m.msgNum);
     const bodyHtml =
@@ -88,21 +78,17 @@ function buildEmailHtml(
     return `
       <div style="margin:0 0 24px;padding:0 0 24px;border-bottom:1px solid #ddd;">
         <p style="font-weight:bold;margin:0 0 4px;">[${i + 1}] ${escapeHtml(m.subject)}</p>
-        <p style="color:#666;font-size:13px;margin:0 0 16px;">발신: ${escapeHtml(m.from)}</p>
+        <p style="color:#666;font-size:13px;margin:0 0 4px;">발신: ${escapeHtml(m.from)}</p>
+        <p style="margin:0 0 16px;font-size:13px;"><a href="${escapeHtml(linkFor(m))}" style="color:#304b2a;">관리자 플랫폼에서 보기 →</a></p>
         <div>${bodyHtml}</div>
       </div>`;
   });
 
-  const link = dashboardUrl
-    ? `<p><a href="${dashboardUrl}">대시보드에서 전체 보기</a></p>`
-    : "";
-
-  return `<div style="font-family:sans-serif;font-size:14px;color:#111;max-width:680px;">
-    <p>공용 메일함(andaasiavc@andaasiavc.com)에 담당하시는 영역의 새 메일이 도착했습니다.</p>
+  return layoutHtml(`
+    <p>공용 메일함에 새 메일이 도착했어요.</p>
+    ${platformButtonHtml(homeLink())}
     ${sections.join("")}
-    ${link}
-    <p style="color:#999;font-size:12px;">(이 메일은 ANDA 페르소나가 자동으로 분류·발송한 알림입니다.)</p>
-  </div>`;
+    ${platformButtonHtml(homeLink())}`);
 }
 
 export interface EmailAlertResult {
@@ -117,7 +103,7 @@ export interface EmailAlertResult {
  * so download-link buttons stay clickable) and attachments verbatim — and logs each mail's send
  * outcome for the "발송 여부" dashboard. Internal-domain senders are dropped before routing.
  */
-export async function sendEmailAlerts(rawMails: ClassifiedMail[], dashboardUrl?: string): Promise<EmailAlertResult> {
+export async function sendEmailAlerts(rawMails: ClassifiedMail[]): Promise<EmailAlertResult> {
   const mails = rawMails.filter((m) => !isInternalSender(m.from));
   const groups = await groupMailsByRecipient(mails);
 
@@ -138,14 +124,13 @@ export async function sendEmailAlerts(rawMails: ClassifiedMail[], dashboardUrl?:
   const logEntries: SendLogEntry[] = [];
 
   for (const group of groups) {
-    const subjectLabel =
-      group.team === "investment" ? `투자팀 - ${group.recipientName}` : `관리팀 - ${group.recipientName}`;
     const attachments = group.mails.flatMap((m) => fullByMsgNum.get(m.msgNum)?.attachments ?? []);
     const result = await sendEmail({
       to: group.email,
-      subject: `[ANDA 페르소나] 새 메일 ${group.mails.length}통 도착 — ${subjectLabel}`,
-      text: buildEmailBody(group.mails, fullByMsgNum, dashboardUrl),
-      html: buildEmailHtml(group.mails, fullByMsgNum, dashboardUrl) ?? undefined,
+      // 받는 팀을 앞에 두면 메일함에서 한눈에 구분됨 — 투자팀·관리팀 공통 형식
+      subject: `[${group.team === "investment" ? "투자팀" : "관리팀"}] 새 메일 ${group.mails.length}통 도착`,
+      text: buildEmailBody(group.mails, fullByMsgNum),
+      html: buildEmailHtml(group.mails, fullByMsgNum),
       attachments: attachments.length > 0 ? attachments : undefined,
     });
     if (result.ok) sentGroups++;

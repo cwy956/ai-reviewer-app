@@ -5,6 +5,7 @@ import { getDomain, getSubDomain } from "@/lib/domains";
 import { getPersona } from "@/lib/personas";
 import { saveEvaluation } from "@/lib/evaluations/store";
 import { downloadUpload, deleteUpload, saveSubmissionFile } from "@/lib/irUploads";
+import { sendSubmissionAlert } from "@/lib/mail/submissionAlert";
 import type { DealInfo } from "@/lib/buildPrompt";
 
 export const runtime = "nodejs";
@@ -96,6 +97,14 @@ export async function POST(request: Request) {
       });
       // 심사역이 원문을 열람·재평가할 수 있도록 원본도 보관 (실패해도 평가 결과 반환에는 영향 없음)
       await saveSubmissionFile(saved.id, buffer).catch((err) => console.error("제출 원본 보관 실패:", err));
+      // 심사역(투자팀) 전원에게 새 투자 제안 알림 — 실패해도 제출·평가 결과 반환에는 영향 없음
+      await sendSubmissionAlert({
+        evaluationId: saved.id,
+        report,
+        domainLabel: domain.label,
+        filename: originalName,
+        file: buffer,
+      }).catch((err) => console.error("새 투자 제안 알림 발송 실패:", err));
     } catch (err) {
       console.error("플랫폼 제출 저장 실패 (평가 결과는 정상 반환됨):", err);
     }

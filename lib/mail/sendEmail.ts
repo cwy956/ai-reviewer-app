@@ -26,7 +26,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   }
   // Without a verified sending domain in Resend, only their shared onboarding@resend.dev sender
   // works — it can send to any recipient, so it's a fine default until a real domain is verified.
-  const from = process.env.RESEND_FROM_EMAIL || "ANDA 페르소나 <onboarding@resend.dev>";
+  const from = process.env.RESEND_FROM_EMAIL || "안다아시아벤처스 <onboarding@resend.dev>";
 
   try {
     const res = await fetch(RESEND_API_URL, {

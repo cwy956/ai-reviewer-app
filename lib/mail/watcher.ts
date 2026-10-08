@@ -11,10 +11,8 @@ const THRESHOLD = Number(process.env.MAIL_WATCH_THRESHOLD || 1);
 
 /** Fans a classified batch out to reviewers/admin by email and logs the outcome. */
 async function dispatchAlerts(classified: ClassifiedMail[], label: string) {
-  const appUrl = process.env.APP_BASE_URL || "http://localhost:3000";
-  const dashboardUrl = `${appUrl}/mailbox`;
 
-  const email = await sendEmailAlerts(classified, dashboardUrl);
+  const email = await sendEmailAlerts(classified);
 
   console.log(
     `[mail-watch]${label} 메일 ${classified.length}통 알림 — 이메일: ${email.sentGroups}명 성공, ` +
