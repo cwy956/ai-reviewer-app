@@ -349,6 +349,8 @@ function makeToolRunner(persona: Persona, domain: Domain, markedText: string, de
         tools: [tool],
         tool_choice: { type: "tool", name: tool.name },
       });
+      // 비용 점검용 — 평가 한 번이 실제로 쓴 토큰을 로그에 남김 (Vercel 로그에서 확인)
+      console.log(`[usage] ${tool.name} model=${MODEL} in=${response.usage.input_tokens} out=${response.usage.output_tokens}`);
       const toolUse = response.content.find((block): block is Anthropic.ToolUseBlock => block.type === "tool_use");
       if (!toolUse) {
         throw new Error("모델이 구조화된 결과를 반환하지 않았습니다.");
