@@ -240,7 +240,7 @@ export function ResultReport({
         <div className="rounded-lg border border-accent/40 bg-accent/5 p-5 text-center">
           <p className="font-semibold text-accent-soft">제출이 완료되었어요</p>
           <p className="mt-1 text-sm text-muted">
-            {reviewerAffiliation} 심사역이 제출하신 IR을 검토하고 있어요. 좋은 기업이라고 판단되면 먼저 연락드릴게요.
+            {reviewerAffiliation} 심사역이 제출하신 IR을 직접 검토합니다. 투자 논의가 필요하다고 판단되면 연락드릴게요.
           </p>
         </div>
       )}
