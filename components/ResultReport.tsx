@@ -21,7 +21,7 @@ function CompanySnapshotCard({ companySnapshot }: { companySnapshot?: string }) 
   return (
     <div className="rounded-lg border border-panel-border bg-panel p-5">
       <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">한눈에 보기</p>
-      <p className="text-base font-medium leading-relaxed text-foreground">{companySnapshot}</p>
+      <p className="whitespace-pre-line text-base font-medium leading-relaxed text-foreground">{companySnapshot}</p>
     </div>
   );
 }
