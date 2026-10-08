@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { AUTH_COOKIE, verifySessionToken } from "@/lib/internalAuth";
 
 // Pages/APIs meant only for our own reviewers/admin, never for the startups using the public
-// IR-evaluation page at "/". Gated behind a single shared password entered on /internal-login,
-// stored as a plain cookie (httpOnly + secure) — simple, no user accounts, matches the
-// "internal tool" scope of this app.
+// IR-evaluation page at "/". Gated behind a single shared password entered on /internal-login;
+// 로그인하면 서명된 세션 쿠키(7일)가 발급됨 — 비밀번호 자체는 쿠키에 저장하지 않음(lib/internalAuth.ts).
+// 새 내부 페이지/API를 만들면 아래 두 목록(PROTECTED_PREFIXES, matcher)에 반드시 추가할 것.
 const PROTECTED_PREFIXES = [
   "/internal",
   "/onboarding",
@@ -15,14 +16,14 @@ const PROTECTED_PREFIXES = [
   "/api/dashboard",
   "/api/ir-deals",
   "/api/site-analytics",
+  "/api/personas",
 ];
-const AUTH_COOKIE = "internal_auth";
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (!isProtectedPath(pathname)) return NextResponse.next();
 
@@ -37,7 +38,7 @@ export function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (req.cookies.get(AUTH_COOKIE)?.value === password) {
+  if (await verifySessionToken(req.cookies.get(AUTH_COOKIE)?.value, password)) {
     return NextResponse.next();
   }
 
@@ -62,5 +63,6 @@ export const config = {
     "/api/dashboard",
     "/api/ir-deals/:path*",
     "/api/site-analytics",
+    "/api/personas",
   ],
 };

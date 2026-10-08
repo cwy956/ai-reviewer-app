@@ -14,6 +14,11 @@ const MENU: { href: string; label: string; match: (p: string) => boolean }[] = [
 export function InternalNav() {
   const pathname = usePathname() ?? "";
 
+  async function logout() {
+    await fetch("/api/internal-login", { method: "DELETE" }).catch(() => {});
+    window.location.href = "/internal-login";
+  }
+
   return (
     <header className="sticky top-0 z-40 border-b border-panel-border bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-6 px-4">
@@ -40,9 +45,14 @@ export function InternalNav() {
           })}
         </nav>
 
-        <Link href="/" className="hidden shrink-0 text-xs text-muted hover:text-accent lg:inline">
-          기업용 페이지 ↗
-        </Link>
+        <div className="flex shrink-0 items-center gap-4 text-xs text-muted">
+          <Link href="/" className="hidden hover:text-accent lg:inline">
+            기업용 페이지 ↗
+          </Link>
+          <button onClick={logout} className="hover:text-accent">
+            로그아웃
+          </button>
+        </div>
       </div>
     </header>
   );
