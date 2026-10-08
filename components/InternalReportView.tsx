@@ -3,6 +3,7 @@
 import type { ActionItem, CitedPoint, EvaluationReport, InvestmentCriterionAssessment } from "@/lib/reportSchema";
 import { CRITERION_BY_ID } from "@/lib/investmentCriteria";
 import { PageBadges } from "./StrengthsImprovements";
+import { FinancialsCard } from "./FinancialsCard";
 
 const PRIORITY_STYLES: Record<ActionItem["priority"], string> = {
   높음: "bg-bad/15 text-bad",
@@ -234,6 +235,8 @@ export function InternalReportView({
       )}
 
       <ScoreHero report={report} />
+
+      {report.financials && <FinancialsCard financials={report.financials} />}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-good/30 bg-good/5">

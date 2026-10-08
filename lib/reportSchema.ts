@@ -130,6 +130,20 @@ export interface SubmissionInfo {
   submittedAt: string;
 }
 
+/** IR 자료에 적힌 연도별 주요 재무 수치(백만원). 외부 조회값이 아님. kind=추정은 회사가 IR에 적은 계획·전망치. */
+export interface FinancialRow {
+  year: number;
+  kind: "실적" | "추정";
+  revenue: number | null;
+  operatingProfit: number | null;
+  netIncome: number | null;
+}
+
+export interface FinancialSummary {
+  rows: FinancialRow[];
+  note: string;
+}
+
 export interface EvaluationReport {
   /** 이 평가를 만든 AI 모델. 작은 모델(Haiku)로 일괄 처리한 건은 화면에 '간이 평가'로 표시됨. 예전 평가에는 없음. */
   evaluatedModel?: string;
@@ -158,6 +172,8 @@ export interface EvaluationReport {
   improvements: CitedPoint[];
   industryFit: IndustryFitAssessment;
   investmentAttractiveness?: InvestmentAttractivenessAssessment;
+  /** IR에 적힌 재무 수치(내부 평가만). 이 필드가 생기기 전 평가에는 없음. */
+  financials?: FinancialSummary;
   storyline: StorylineStep[];
   actionPlan: ActionItem[];
   reviewerQuestions: string[];

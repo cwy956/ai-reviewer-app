@@ -5,6 +5,7 @@ import type { Persona } from "./personas/schema";
 import { buildSystemPrompt, buildUserMessage, type DealInfo } from "./buildPrompt";
 import type { EvaluationReport, InvestmentAttractivenessAssessment } from "./reportSchema";
 import { sanitizeReport } from "./sanitizeReport";
+import { FINANCIALS_SCHEMA, normalizeFinancials } from "./financials";
 import { INVESTMENT_CRITERIA, CHECK_VERDICTS, computeWeightedScore, calibrateScore, composeVerdict } from "./investmentCriteria";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
@@ -261,6 +262,8 @@ function buildReportTool(mode: "external" | "internal", includeStoryline = false
 
   // 스토리라인(회사를 소개하는 흐름)은 스타트업용 피드백이라 내부 심사역 평가에서는 생성하지 않음
   if (mode === "internal" && !includeStoryline) delete properties.storyline;
+  // 재무 수치는 내부 심사역용 — 스타트업에게 보이는 external 리포트에는 넣지 않음
+  if (mode === "internal") properties.financials = FINANCIALS_SCHEMA;
 
   const required = [
     "companyName",
@@ -278,6 +281,7 @@ function buildReportTool(mode: "external" | "internal", includeStoryline = false
     "actionPlan",
     "reviewerQuestions",
   ];
+  if (mode === "internal") required.push("financials");
 
   if (mode === "external" || includeStoryline) required.splice(required.indexOf("actionPlan"), 0, "storyline");
 
@@ -418,6 +422,7 @@ export async function evaluateIr(
   const t0 = Date.now();
   const report = fillCategoryLabels(await run<EvaluationReport>(buildReportTool(mode, options.includeStoryline), baseSystem));
   report.storyline = report.storyline ?? [];
+  report.financials = mode === "internal" ? normalizeFinancials(report.financials) : undefined;
   report.evaluatedModel = MODEL;
   // 모델이 후보에 없는 라벨을 지어내는 경우가 있어 해당 영역의 세부 영역 라벨과 정확히 일치할 때만 저장
   if (!domain.subDomains.some((s) => s.label === report.subDomain)) report.subDomain = undefined;
