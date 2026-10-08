@@ -148,15 +148,14 @@ export default function InternalHome() {
       {/* 히어로 — 흰 바탕, 안다 초록 포인트. 서비스 전체(접수·분류·평가)를 한 문장으로 */}
       <section className="border-b border-panel-border bg-gradient-to-b from-white to-accent-tint/60">
         <div className="mx-auto max-w-6xl px-4 pb-24 pt-12">
-          <p className="text-sm font-medium text-accent-soft">IR 접수부터 투자 검토까지</p>
+          <p className="text-sm font-medium text-accent-soft">투자팀·관리팀 모두를 위한 메일 · IR 도우미</p>
           <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            들어오는 IR을 AI가 먼저 읽고,
+            안다아시아벤처스로 들어오는 모든 메일,
             <br />
-            <span className="text-accent">투자 검토에 필요한 것만 정리합니다</span>
+            <span className="text-accent">AI가 읽고 분류하고 정리합니다</span>
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
-            메일과 기업 플랫폼으로 접수된 IR을 자동으로 분류해 담당 팀에 전달하고, 투자 매력도 평가와 대표에게 확인할 질문까지
-            한 화면에서 확인할 수 있어요.
+            투자 문의는 투자팀으로, 행정·제휴 문의는 관리팀으로. IR은 투자 매력도와 확인할 질문까지 정리해 드려요.
           </p>
           {data && <p className="mt-4 text-xs text-muted">마지막 메일 확인 · {formatDateTime(data.summary.lastCheckedAt)}</p>}
         </div>
