@@ -13,6 +13,7 @@ import { ReviewerQuestions } from "./ReviewerQuestions";
 import { PeerResearchPlaceholder } from "./PeerResearchPlaceholder";
 import { PeerResearchPanel } from "./PeerResearchPanel";
 import { InternalReportView } from "./InternalReportView";
+import { FinancialsCard } from "./FinancialsCard";
 import { sanitizeReport } from "@/lib/sanitizeReport";
 
 
@@ -238,6 +239,7 @@ export function ResultReport({
     <div className="space-y-5">
       <CompanySnapshotCard companySnapshot={report.companySnapshot} />
       <Hero report={report} internalMode={internalMode} />
+      {internalMode && report.financials && <FinancialsCard financials={report.financials} />}
       <ExtractionQualityBanner extractionQuality={report.extractionQuality} />
       {!internalMode && <CompanyFeedbackSummary report={report} />}
 
