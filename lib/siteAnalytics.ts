@@ -9,7 +9,6 @@ export interface SiteAnalytics {
   /** 방문자수=activeUsers, 방문수=sessions */
   periods: { key: string; label: string; visitors: number; visits: number }[];
   daily: { date: string; visitors: number; visits: number }[];
-  topPages: { path: string; title: string; views: number }[];
   fetchedAt: string;
 }
 
@@ -118,7 +117,7 @@ export async function getSiteAnalytics(): Promise<SiteAnalytics> {
   const sa = loadServiceAccount();
   const token = await getAccessToken(sa);
 
-  const [a, b, daily, pages, realtime] = await Promise.all([
+  const [a, b, daily, realtime] = await Promise.all([
     periodReport(token, RANGES_A),
     periodReport(token, RANGES_B),
     ga<Report>(token, "runReport", {
@@ -126,13 +125,6 @@ export async function getSiteAnalytics(): Promise<SiteAnalytics> {
       dimensions: [{ name: "date" }],
       metrics: METRICS,
       orderBys: [{ dimension: { dimensionName: "date" } }],
-    }),
-    ga<Report>(token, "runReport", {
-      dateRanges: [{ startDate: "29daysAgo", endDate: "today" }],
-      dimensions: [{ name: "pagePath" }, { name: "pageTitle" }],
-      metrics: [{ name: "screenPageViews" }],
-      orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
-      limit: 10,
     }),
     ga<Report>(token, "runRealtimeReport", { metrics: [{ name: "activeUsers" }] }),
   ]);
@@ -157,11 +149,6 @@ export async function getSiteAnalytics(): Promise<SiteAnalytics> {
     realtimeUsers: num(realtime.rows?.[0]?.metricValues?.[0]?.value),
     periods: [...a, ...b],
     daily: dailySeries,
-    topPages: (pages.rows ?? []).map((row) => ({
-      path: row.dimensionValues?.[0]?.value ?? "",
-      title: row.dimensionValues?.[1]?.value ?? "",
-      views: num(row.metricValues?.[0]?.value),
-    })),
     fetchedAt: new Date().toISOString(),
   };
   cache = { data, at: Date.now() };

@@ -88,25 +88,6 @@ export function SiteVisitCard() {
             </div>
           </div>
 
-          <div className="lg:col-span-2">
-            <p className="mb-2 text-xs font-medium text-muted">많이 본 페이지 (최근 30일)</p>
-            {state.data.topPages.length === 0 ? (
-              <p className="text-sm text-muted">아직 집계된 페이지가 없어요.</p>
-            ) : (
-              <ol className="grid gap-x-8 sm:grid-cols-2">
-                {state.data.topPages.map((p, i) => (
-                  <li key={p.path} className="flex items-baseline justify-between gap-3 border-b border-panel-border/60 py-1.5 text-sm">
-                    <span className="min-w-0 truncate">
-                      <span className="mr-2 text-xs text-muted">{i + 1}</span>
-                      {p.title || p.path}
-                      <span className="ml-1.5 text-xs text-muted">{p.path}</span>
-                    </span>
-                    <span className="shrink-0 font-medium text-foreground/80">{fmt(p.views)}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
         </div>
       )}
     </section>
