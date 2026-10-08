@@ -68,7 +68,7 @@ export function SiteVisitCard() {
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-[11px] text-muted">구글 애널리틱스 기준 · 합계는 연동을 시작한 날부터 집계돼요 · 5분마다 갱신</p>
+            <p className="mt-2 text-[11px] text-muted">구글 애널리틱스 기준 · 접속 중은 실시간, 오늘·어제 숫자는 구글 집계 지연으로 몇 시간 늦게 반영될 수 있어요 · 합계는 연동을 시작한 날부터 집계돼요 · 5분마다 갱신</p>
           </div>
 
           <div>
