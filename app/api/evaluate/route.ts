@@ -69,6 +69,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "PDF 파일만 지원합니다." }, { status: 400 });
     }
     const parsed = await parsePdf(buffer);
+    // 글자를 하나도 못 읽는 파일(빈 PDF 등)은 AI를 부르기 전에 돌려보냄 — 비용이 나가기 전에 거르는 마지막 관문
+    if (parsed.markedText.replace(/[p.d+]/g, "").trim().length < 30) {
+      return NextResponse.json({ error: "PDF에서 읽을 수 있는 글자를 찾지 못했어요. 텍스트가 포함된 PDF인지 확인해 주세요." }, { status: 400 });
+    }
 
     // 메일로 들어온 IR과 같은 평가(내부 모드)로 돌려서 심사역 화면이 두 경로에서 똑같이 나오게 함.
     // 단 투자 매력도(내부 전용, 약 1분)는 기업에게 응답한 뒤 백그라운드로 계산해서 기업의 대기 시간을 늘리지 않음.
