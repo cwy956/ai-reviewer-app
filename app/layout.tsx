@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI 심사역 IR 평가 — 안다아시아벤처스",
-  description: "실제 VC 심사역의 관점을 재현한 AI 심사역이 IR 자료의 충실도를 평가합니다.",
+  title: "투자 제안 제출 | 안다아시아벤처스",
+  description: "IR 자료를 제출하시면 안다아시아벤처스 심사역이 직접 검토하고, AI 심사역이 바로 피드백을 드려요.",
 };
 
 export default function RootLayout({
