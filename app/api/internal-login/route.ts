@@ -20,12 +20,22 @@ function passwordMatches(input: string, expected: string): boolean {
   return timingSafeEqual(a, b);
 }
 
+function wrongPasswordMessage(remaining: number): string {
+  if (remaining === 1) return "비밀번호가 올바르지 않아요. ⚠ 마지막 기회예요. 한 번 더 틀리면 10분간 잠겨요.";
+  if (remaining === 2) return "비밀번호가 올바르지 않아요. ⚠ 남은 시도 2회, 모두 틀리면 10분간 잠겨요.";
+  return `비밀번호가 올바르지 않아요. (남은 시도 ${remaining}회)`;
+}
+
 export async function POST(req: NextRequest) {
   const ip = clientIp(req);
   const now = Date.now();
   const rec = fails.get(ip);
   if (rec && rec.resetAt > now && rec.count >= MAX_FAILS) {
-    return NextResponse.json({ error: "시도 횟수가 너무 많아요. 10분 뒤에 다시 시도해 주세요." }, { status: 429 });
+    const minutes = Math.max(1, Math.ceil((rec.resetAt - now) / 60000));
+    return NextResponse.json(
+      { error: `비밀번호를 ${MAX_FAILS}번 틀려서 잠겼어요. ${minutes}분 뒤에 다시 시도해 주세요.`, locked: true },
+      { status: 429 }
+    );
   }
 
   const body = await req.json().catch(() => ({}));
@@ -38,7 +48,14 @@ export async function POST(req: NextRequest) {
   if (!passwordMatches(password, expected)) {
     const next = rec && rec.resetAt > now ? { count: rec.count + 1, resetAt: rec.resetAt } : { count: 1, resetAt: now + WINDOW_MS };
     fails.set(ip, next);
-    return NextResponse.json({ error: "비밀번호가 올바르지 않습니다." }, { status: 401 });
+    const remaining = MAX_FAILS - next.count;
+    if (remaining <= 0) {
+      return NextResponse.json(
+        { error: `비밀번호를 ${MAX_FAILS}번 틀려서 10분간 잠겼어요. 잠시 후 다시 시도해 주세요.`, locked: true },
+        { status: 429 }
+      );
+    }
+    return NextResponse.json({ error: wrongPasswordMessage(remaining), remaining }, { status: 401 });
   }
 
   fails.delete(ip);

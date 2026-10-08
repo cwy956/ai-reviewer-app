@@ -3,7 +3,7 @@
 // Web Crypto만 써서 proxy(미들웨어)와 라우트 양쪽에서 같은 코드를 씀.
 
 export const AUTH_COOKIE = "internal_auth";
-export const SESSION_SECONDS = 60 * 60 * 24 * 7; // 7일
+export const SESSION_SECONDS = 60 * 60 * 2; // 2시간 — 보안상 짧게. 만료되면 다시 로그인
 
 const enc = new TextEncoder();
 

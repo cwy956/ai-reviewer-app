@@ -11,11 +11,13 @@ function InternalLoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [locked, setLocked] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setLocked(false);
     try {
       const res = await fetch("/api/internal-login", {
         method: "POST",
@@ -24,6 +26,7 @@ function InternalLoginForm() {
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.locked) setLocked(true);
         throw new Error(data.error || "로그인에 실패했습니다.");
       }
       router.push(redirect);
@@ -52,7 +55,12 @@ function InternalLoginForm() {
           autoFocus
           className="w-full rounded-lg border border-panel-border bg-panel px-4 py-3 text-sm outline-none focus:border-accent"
         />
-        {error && <p className="text-sm text-bad">{error}</p>}
+        {error && (
+          <p className={locked ? "rounded-lg border border-bad/30 bg-bad/5 px-3 py-2.5 text-sm font-medium text-bad" : "text-sm text-bad"}>
+            {locked ? "🔒 " : ""}
+            {error}
+          </p>
+        )}
         <button
           type="submit"
           disabled={loading || !password}
