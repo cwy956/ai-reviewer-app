@@ -145,6 +145,28 @@ export async function updateEvaluationReport(
   return rowToEvaluation(data);
 }
 
+/** 회사명 비교용 정규화 — 공백·㈜·(주)·주식회사·대소문자 차이를 무시 */
+export function normalizeCompanyName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/㈜|\(주\)|주식회사|\(유\)|유한회사/g, "")
+    .replace(/[\s\-_.,()·]/g, "");
+}
+
+/** 같은 회사가 이전에 플랫폼으로 제출한 적이 있는지 (이번 건 제외). 알림 중복 방지에 사용. */
+export async function hasEarlierPlatformSubmission(evaluationId: number, companyName: string): Promise<boolean> {
+  const target = normalizeCompanyName(companyName);
+  if (!target) return false;
+  const { data, error } = await getSupabase()
+    .from("ir_evaluations")
+    .select("company_name")
+    .eq("source", "platform")
+    .lt("id", evaluationId)
+    .limit(2000);
+  if (error) throw new Error(`이전 제출 조회 실패: ${error.message}`);
+  return (data ?? []).some((row) => normalizeCompanyName((row.company_name as string | null) ?? "") === target);
+}
+
 export async function saveEvaluation(input: {
   source: EvaluationSource;
   msgNum?: number;

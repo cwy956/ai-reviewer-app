@@ -12,11 +12,32 @@ export interface SendEmailParams {
   /** Rendered HTML alternative — most clients prefer this over `text` when both are present. */
   html?: string;
   attachments?: { filename: string; content: Buffer }[];
+  /** 받는 팀 — 보내는 사람 표시 이름이 팀별로 달라짐(투자팀/관리팀). */
+  team?: "investment" | "admin";
 }
 
 export interface SendEmailResult {
   ok: boolean;
   error?: string;
+}
+
+const TEAM_NAME = { investment: "안다아시아벤처스 투자팀", admin: "안다아시아벤처스 관리팀" } as const;
+
+/**
+ * 보내는 사람 결정.
+ * 1) 팀 전용 환경변수(RESEND_FROM_INVESTMENT / RESEND_FROM_ADMIN)가 있으면 그대로 사용 — 팀마다 다른 "주소"를 쓰고 싶을 때
+ *    (Resend에서 도메인 인증을 마친 뒤에만 가능)
+ * 2) 없으면 RESEND_FROM_EMAIL의 "주소" 부분만 가져와 "표시 이름"을 팀 이름으로 붙임
+ *    → Vercel에는 주소 하나(RESEND_FROM_EMAIL)만 있어도 투자팀/관리팀 이름이 따로 나감.
+ */
+function resolveFrom(team?: "investment" | "admin"): string {
+  if (team === "investment" && process.env.RESEND_FROM_INVESTMENT) return process.env.RESEND_FROM_INVESTMENT;
+  if (team === "admin" && process.env.RESEND_FROM_ADMIN) return process.env.RESEND_FROM_ADMIN;
+
+  const configured = process.env.RESEND_FROM_EMAIL?.trim() || "onboarding@resend.dev";
+  const address = /<([^>]+)>/.exec(configured)?.[1] ?? configured;
+  const displayName = team ? TEAM_NAME[team] : "안다아시아벤처스";
+  return `${displayName} <${address}>`;
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
@@ -26,7 +47,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   }
   // Without a verified sending domain in Resend, only their shared onboarding@resend.dev sender
   // works — it can send to any recipient, so it's a fine default until a real domain is verified.
-  const from = process.env.RESEND_FROM_EMAIL || "안다아시아벤처스 <onboarding@resend.dev>";
+  const from = resolveFrom(params.team);
 
   try {
     const res = await fetch(RESEND_API_URL, {

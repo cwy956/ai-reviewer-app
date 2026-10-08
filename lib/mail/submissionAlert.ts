@@ -3,6 +3,7 @@ import { listAdminTeamMembers } from "../adminTeam/store";
 import type { EvaluationReport } from "../reportSchema";
 import { dealLink, homeLink } from "../appUrl";
 import { sendEmail } from "./sendEmail";
+import { hasEarlierPlatformSubmission } from "../evaluations/store";
 import { escapeHtml, layoutHtml, platformButtonHtml, platformLinkText } from "./alertLayout";
 
 // 투자기업 페이지(플랫폼)로 새 투자 제안이 제출되면 심사역(투자팀) 전원에게 알림 — 메일로 들어온 IR과 같은 수신자 규칙.
@@ -16,14 +17,20 @@ export async function sendSubmissionAlert(input: {
   domainLabel: string;
   filename: string;
   file?: Buffer;
-}): Promise<{ sent: number; failed: number }> {
+}): Promise<{ sent: number; failed: number; skipped?: "repeat" | "no-recipient" }> {
   const sub = input.report.submission;
   if (!sub) return { sent: 0, failed: 0 };
+
+  // 같은 회사가 다시 올린 경우(자료 보완 재제출 등)에는 알림을 보내지 않음 — 제출 자체는 저장되고 목록에는 보임
+  if (await hasEarlierPlatformSubmission(input.evaluationId, sub.companyName)) {
+    return { sent: 0, failed: 0, skipped: "repeat" };
+  }
 
   const [personas, admins] = await Promise.all([listPersonas(), listAdminTeamMembers()]);
   const reviewers = personas.filter((p) => p.email && !p.isDefault).map((p) => ({ name: p.name, email: p.email! }));
   const recipients = reviewers.length > 0 ? reviewers : admins.map((m) => ({ name: m.name, email: m.email }));
-  if (recipients.length === 0) return { sent: 0, failed: 0 };
+  if (recipients.length === 0) return { sent: 0, failed: 0, skipped: "no-recipient" };
+  const team = reviewers.length > 0 ? "investment" : "admin";
 
   const link = dealLink(`platform-${input.evaluationId}`);
   const snapshot = (input.report.companySnapshot ?? "").split(/\n+/).filter(Boolean);
@@ -79,7 +86,9 @@ export async function sendSubmissionAlert(input: {
   for (const r of recipients) {
     const result = await sendEmail({
       to: r.email,
-      subject: `[${sub.companyName}] 새 투자 제안 도착`,
+      // 알림 메일 공통 형식: 받는 팀을 앞에 — "[투자팀] 새 투자 제안 도착_회사명"
+      subject: `[${team === "investment" ? "투자팀" : "관리팀"}] 새 투자 제안 도착_${sub.companyName}`,
+      team,
       text,
       html,
       attachments,

@@ -131,6 +131,7 @@ export async function sendEmailAlerts(rawMails: ClassifiedMail[]): Promise<Email
       subject: `[${group.team === "investment" ? "투자팀" : "관리팀"}] 새 메일 ${group.mails.length}통 도착`,
       text: buildEmailBody(group.mails, fullByMsgNum),
       html: buildEmailHtml(group.mails, fullByMsgNum),
+      team: group.team,
       attachments: attachments.length > 0 ? attachments : undefined,
     });
     if (result.ok) sentGroups++;
