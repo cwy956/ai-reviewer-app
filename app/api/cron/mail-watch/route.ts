@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkForNewMail } from "@/lib/mail/watcher";
+import { fillMissingPlatformInvestment } from "@/lib/evaluations/fillMissing";
 
 export const runtime = "nodejs";
 // checkForNewMail now auto-evaluates every newly-classified IR mail (AI 평가 ~1~2분/건,
@@ -23,6 +24,16 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const startedAt = Date.now();
   const result = await checkForNewMail();
-  return NextResponse.json(result);
+  // 메일 처리에 시간이 많이 안 걸렸을 때만, 플랫폼 제출 중 투자 매력도가 빠진 건을 채움(실패해도 크론 결과에는 영향 없음)
+  let filledPlatform: number[] = [];
+  if (Date.now() - startedAt < 120_000) {
+    try {
+      filledPlatform = (await fillMissingPlatformInvestment(1)).filled;
+    } catch (err) {
+      console.error("[cron] 플랫폼 투자 매력도 보강 실패:", err);
+    }
+  }
+  return NextResponse.json({ ...result, filledPlatform });
 }
