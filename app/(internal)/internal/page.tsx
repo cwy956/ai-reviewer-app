@@ -149,9 +149,9 @@ export default function InternalHome() {
       {/* 히어로 — 흰 바탕, 안다 초록 포인트. 서비스 전체(접수·분류·평가)를 한 문장으로 */}
       <section className="border-b border-panel-border bg-gradient-to-b from-white to-accent-tint/60">
         <div className="mx-auto max-w-6xl px-4 pb-24 pt-12">
-          <p className="text-sm font-medium text-accent-soft">투자팀·관리팀 모두를 위한 메일 · IR 도우미</p>
+          <p className="text-sm font-medium text-accent-soft">투자팀·관리팀 모두를 위한 업무 도우미</p>
           <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            안다아시아벤처스로 들어오는 모든 메일,
+            안다아시아벤처스로 들어오는 모든 문의,
             <br />
             <span className="text-accent">AI가 읽고 분류하고 정리합니다</span>
           </h1>
