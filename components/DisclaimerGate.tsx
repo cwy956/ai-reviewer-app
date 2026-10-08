@@ -39,6 +39,7 @@ export function DisclaimerGate({
         <ul className="list-disc space-y-1 pl-5 text-xs text-muted">
           <li>수집 항목: 회사명, 담당자 이름, 이메일, 연락처(선택), 남기신 코멘트</li>
           <li>이용 목적: 투자 제안 검토 및 검토 진행 시 연락</li>
+          <li>AI 피드백을 만들기 위해 제출하신 IR 자료가 외부 AI 서비스(Anthropic Claude)로 전송되어 분석됩니다.</li>
           <li>제출하신 정보는 안다아시아벤처스 심사역만 열람하며 외부에 공개하지 않습니다.</li>
         </ul>
         <label className="flex cursor-pointer items-start gap-2">
