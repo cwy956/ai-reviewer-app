@@ -203,13 +203,27 @@ export function ResultReport({
       <PeerResearchPlaceholder />
     );
 
-  // 내부 심사역용: 결론·점수·핵심 요인·할 일을 먼저, 나머지 상세는 접어서 보여줌
-  if (internalMode && report.investmentAttractiveness) {
+  // 내부 심사역용: 메일·플랫폼 어느 경로로 들어왔든 같은 화면 — 결론·점수·핵심 요인·할 일을 먼저, 나머지 상세는 아래에.
+  // 투자 매력도가 아직 없는 건(계산 전·실패)도 같은 틀로 보여주되 점수 자리에 안내만 둠.
+  if (internalMode) {
+    const viewReport: EvaluationReport = report.investmentAttractiveness
+      ? report
+      : {
+          ...report,
+          investmentAttractiveness: {
+            overallScore: null,
+            summary: "투자 매력도 평가가 아직 없어요. 아래 '다시 평가하기'로 평가하면 채워져요.",
+            criteria: [],
+            strongPoints: [],
+            concerns: [],
+            reviewerNextSteps: [],
+          },
+        };
     return (
       <div className="space-y-5">
         <ExtractionQualityBanner extractionQuality={report.extractionQuality} />
         <InternalReportView
-          report={report}
+          report={viewReport}
           peerPanel={peerPanel}
           details={
             <>
