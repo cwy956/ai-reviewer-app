@@ -284,7 +284,12 @@ export default function IrDealsPage() {
   }
 
   const yearOf = (d: Deal) => (d.date ? String(new Date(d.date).getFullYear()) : "");
-  const years = Array.from(new Set(deals.map(yearOf).filter(Boolean))).sort().reverse(); // 최신 연도부터
+  const years = (() => {
+    // 딜이 없는 연도도 칸은 보이게 — 올해부터 가장 오래된 딜의 연도까지 빠짐없이
+    const top = new Date().getFullYear();
+    const bottom = Math.min(top, ...deals.map(yearOf).filter(Boolean).map(Number));
+    return Array.from({ length: top - bottom + 1 }, (_, i) => String(top - i));
+  })(); // 최신 연도부터
   const filteredDeals = deals.filter(
     (d) =>
       (filterDomain === "all" || d.domainId === filterDomain) &&
@@ -322,7 +327,7 @@ export default function IrDealsPage() {
         )}
         {!loading && deals.length > 0 && visibleDeals.length === 0 && (
           <p className="rounded-lg border border-dashed border-panel-border p-6 text-center text-sm text-muted">
-            이 영역에 해당하는 IR이 없어요.
+            {filterYear !== "all" ? `${filterYear}년에 들어온 IR이 없어요.` : "이 영역에 해당하는 IR이 없어요."}
           </p>
         )}
 

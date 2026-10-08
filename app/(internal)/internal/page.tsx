@@ -142,7 +142,12 @@ export default function InternalHome() {
 
   const recent = deals.slice(0, 6);
   const yearOf = (d: DealLite) => (d.date ? String(new Date(d.date).getFullYear()) : "");
-  const years = Array.from(new Set(deals.map(yearOf).filter(Boolean))).sort().reverse();
+  const years = (() => {
+    // 딜이 없는 연도도 칸은 보이게 — 올해부터 가장 오래된 딜의 연도까지 빠짐없이
+    const top = new Date().getFullYear();
+    const bottom = Math.min(top, ...deals.map(yearOf).filter(Boolean).map(Number));
+    return Array.from({ length: top - bottom + 1 }, (_, i) => String(top - i));
+  })();
   // 같은 회사가 여러 번 들어온 경우(재제출·재평가)는 가장 높은 점수 한 건만 — 순위에 같은 회사가 반복되지 않게
   const scoreOf = (d: DealLite) => d.evaluation?.investmentAttractivenessScore ?? null;
   const companyKey = (d: DealLite) =>
