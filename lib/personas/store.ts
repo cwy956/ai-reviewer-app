@@ -95,3 +95,32 @@ export async function upsertDomainCriteria(personaId: string, criteria: PersonaD
   if (error) throw new Error(`영역별 기준 저장 실패: ${error.message}`);
   return rowToPersona(data as PersonaRow);
 }
+
+/** 담당 영역만 간단히 지정 — 이미 있는 영역의 상세 기준(체크포인트·자유 서술)은 그대로 두고, 새 영역은 빈 기준으로 추가, 빠진 영역은 제거. */
+export async function setPersonaDomains(personaId: string, domainIds: string[]): Promise<Persona> {
+  const existing = await getPersonaById(personaId);
+  if (!existing) throw new Error(`심사역을 찾을 수 없습니다: ${personaId}`);
+
+  const kept = existing.domainCriteria.filter((c) => domainIds.includes(c.domainId));
+  const have = new Set(kept.map((c) => c.domainId));
+  for (const domainId of domainIds) {
+    if (!have.has(domainId)) kept.push({ domainId, starredCheckpointIds: [], freeform: "" });
+  }
+
+  const { data, error } = await getSupabase()
+    .from("personas")
+    .update({ domain_criteria: kept, updated_at: new Date().toISOString() })
+    .eq("id", personaId)
+    .select()
+    .single();
+  if (error) throw new Error(`담당 영역 저장 실패: ${error.message}`);
+  return rowToPersona(data as PersonaRow);
+}
+
+export async function deletePersona(personaId: string): Promise<void> {
+  const existing = await getPersonaById(personaId);
+  if (!existing) throw new Error("담당자를 찾을 수 없습니다.");
+  if (existing.isDefault) throw new Error("기본 심사역은 삭제할 수 없습니다.");
+  const { error } = await getSupabase().from("personas").delete().eq("id", personaId);
+  if (error) throw new Error(`삭제 실패: ${error.message}`);
+}

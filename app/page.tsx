@@ -97,7 +97,7 @@ export default function Home() {
 
   return (
     <>
-    <PublicHeader linkHref="/internal-login" linkLabel="관리자 페이지 이동" />
+    <PublicHeader linkHref="/internal" linkLabel="관리자 페이지 이동" />
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12">
       <header className="mb-10 text-center">
         <h1 className="text-3xl font-bold text-accent-soft">AI 심사역 IR 평가</h1>
