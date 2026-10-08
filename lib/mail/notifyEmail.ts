@@ -5,6 +5,7 @@ import { sendEmail } from "./sendEmail";
 import { appendSendLog, type SendLogEntry } from "./sendLogStore";
 import { fetchMessageForForwarding, fetchAttachmentContent } from "./client";
 import { dealLink, homeLink } from "../appUrl";
+import { markPasswordSent, passwordForFirstAlert } from "./accessPassword";
 import { ALERT_FOOTER_TEXT, escapeHtml, layoutHtml, platformButtonHtml, platformLinkText } from "./alertLayout";
 
 interface FullMailForForwarding {
@@ -59,17 +60,17 @@ function linkFor(m: ClassifiedMail): string {
   return m.category === "ir" ? dealLink(`mail-${m.msgNum}`) : homeLink();
 }
 
-function buildEmailBody(mails: ClassifiedMail[], fullByMsgNum: Map<number, FullMailForForwarding>): string {
+function buildEmailBody(mails: ClassifiedMail[], fullByMsgNum: Map<number, FullMailForForwarding>, pw: string | null): string {
   const sections = mails.map((m, i) => {
     const full = fullByMsgNum.get(m.msgNum);
     const body = full?.text?.trim() || m.snippet || "(본문을 불러오지 못했습니다)";
-    return `[${i + 1}] ${m.subject}\n발신: ${m.from}\n\n${body}\n\n${platformLinkText(linkFor(m), "관리자 플랫폼에서 보기", false)}`;
+    return `[${i + 1}] ${m.subject}\n발신: ${m.from}\n\n${body}\n\n${platformLinkText(linkFor(m), "관리자 플랫폼에서 보기")}`;
   });
-  return `공용 메일함에 새 메일이 도착했어요.\n\n${sections.join("\n\n─────────\n\n")}\n\n${platformLinkText(homeLink())}\n\n(${ALERT_FOOTER_TEXT})`;
+  return `공용 메일함에 새 메일이 도착했어요.\n\n${sections.join("\n\n─────────\n\n")}\n\n${platformLinkText(homeLink(), undefined, pw)}\n\n(${ALERT_FOOTER_TEXT})`;
 }
 
 /** 링크 버튼을 항상 클릭 가능하게 보여주려고 HTML 본문은 항상 만듦 — 원본에 HTML이 없는 메일은 일반 텍스트를 그대로 넣음. */
-function buildEmailHtml(mails: ClassifiedMail[], fullByMsgNum: Map<number, FullMailForForwarding>): string {
+function buildEmailHtml(mails: ClassifiedMail[], fullByMsgNum: Map<number, FullMailForForwarding>, pw: string | null): string {
   const sections = mails.map((m, i) => {
     const full = fullByMsgNum.get(m.msgNum);
     const bodyHtml =
@@ -86,7 +87,7 @@ function buildEmailHtml(mails: ClassifiedMail[], fullByMsgNum: Map<number, FullM
 
   return layoutHtml(`
     <p>공용 메일함에 새 메일이 도착했어요.</p>
-    ${platformButtonHtml(homeLink())}
+    ${platformButtonHtml(homeLink(), undefined, pw)}
     ${sections.join("")}
     ${platformButtonHtml(homeLink())}`);
 }
@@ -125,17 +126,21 @@ export async function sendEmailAlerts(rawMails: ClassifiedMail[]): Promise<Email
 
   for (const group of groups) {
     const attachments = group.mails.flatMap((m) => fullByMsgNum.get(m.msgNum)?.attachments ?? []);
+    // 접속 비밀번호는 이 사람이 처음 받는 알림에만 넣음
+    const pw = await passwordForFirstAlert(group.email);
     const result = await sendEmail({
       to: group.email,
       // 받는 팀을 앞에 두면 메일함에서 한눈에 구분됨 — 투자팀·관리팀 공통 형식
       subject: `[${group.team === "investment" ? "투자팀" : "관리팀"}] 새 메일 ${group.mails.length}통 도착`,
-      text: buildEmailBody(group.mails, fullByMsgNum),
-      html: buildEmailHtml(group.mails, fullByMsgNum),
+      text: buildEmailBody(group.mails, fullByMsgNum, pw),
+      html: buildEmailHtml(group.mails, fullByMsgNum, pw),
       team: group.team,
       attachments: attachments.length > 0 ? attachments : undefined,
     });
-    if (result.ok) sentGroups++;
-    else failedGroups++;
+    if (result.ok) {
+      sentGroups++;
+      if (pw) await markPasswordSent(group.email);
+    } else failedGroups++;
 
     for (const mail of group.mails) {
       logEntries.push({

@@ -4,6 +4,7 @@ import type { EvaluationReport } from "../reportSchema";
 import { dealLink, homeLink } from "../appUrl";
 import { sendEmail } from "./sendEmail";
 import { hasEarlierPlatformSubmission } from "../evaluations/store";
+import { markPasswordSent, passwordForFirstAlert } from "./accessPassword";
 import { escapeHtml, layoutHtml, platformButtonHtml, platformLinkText } from "./alertLayout";
 
 // 투자기업 페이지(플랫폼)로 새 투자 제안이 제출되면 심사역(투자팀) 전원에게 알림 — 메일로 들어온 IR과 같은 수신자 규칙.
@@ -44,7 +45,7 @@ export async function sendSubmissionAlert(input: {
     ["접수 시각", new Date(sub.submittedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })],
   ];
 
-  const text = [
+  const buildText = (pw: string | null) => [
     "투자기업 페이지로 새 투자 제안이 제출됐어요.",
     "",
     ...rows.map(([k, v]) => `${k}: ${v}`),
@@ -53,11 +54,11 @@ export async function sendSubmissionAlert(input: {
     sub.comment || "(없음)",
     ...(snapshot.length ? ["", "[AI 심사역 요약]", ...snapshot.map((l) => `· ${l}`), `자료 충실도 ${score}/100 (참고용)`] : []),
     "",
-    platformLinkText(link, "관리자 플랫폼에서 확인하기"),
+    platformLinkText(link, "관리자 플랫폼에서 확인하기", pw),
     `전체 목록: ${homeLink()}`,
   ].join("\n");
 
-  const html = layoutHtml(`
+  const buildHtml = (pw: string | null) => layoutHtml(`
     <p style="font-size:16px;font-weight:bold;margin:0 0 12px;">새 투자 제안이 제출됐어요</p>
     <table style="border-collapse:collapse;font-size:14px;">
       ${rows
@@ -76,7 +77,7 @@ export async function sendSubmissionAlert(input: {
     <p style="margin:4px 0 0;color:#777;font-size:12px;">자료 충실도 ${score}/100 (참고용)</p>`
         : ""
     }
-    ${platformButtonHtml(link)}`);
+    ${platformButtonHtml(link, undefined, pw)}`);
 
   const attachments =
     input.file && input.file.length <= ATTACH_LIMIT_BYTES ? [{ filename: input.filename, content: input.file }] : undefined;
@@ -84,6 +85,10 @@ export async function sendSubmissionAlert(input: {
   let sent = 0;
   let failed = 0;
   for (const r of recipients) {
+    // 접속 비밀번호는 이 사람이 처음 받는 알림에만 넣음
+    const pw = await passwordForFirstAlert(r.email);
+    const text = buildText(pw);
+    const html = buildHtml(pw);
     const result = await sendEmail({
       to: r.email,
       // 알림 메일 공통 형식: 받는 팀을 앞에 — "[투자팀] 새 투자 제안 도착_회사명"
@@ -93,8 +98,10 @@ export async function sendSubmissionAlert(input: {
       html,
       attachments,
     });
-    if (result.ok) sent++;
-    else {
+    if (result.ok) {
+      sent++;
+      if (pw) await markPasswordSent(r.email);
+    } else {
       failed++;
       console.error(`[submission-alert] ${r.email} 발송 실패:`, result.error);
     }
