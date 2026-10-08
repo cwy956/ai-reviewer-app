@@ -1,5 +1,6 @@
 "use client";
 
+import { PublicHeader } from "@/components/PublicHeader";
 import { useState } from "react";
 import { DomainPicker } from "@/components/DomainPicker";
 import { DealInfoForm, type DealInfoValue } from "@/components/DealInfoForm";
@@ -95,21 +96,16 @@ export default function Home() {
   const showResult = Boolean(report && domain);
 
   return (
+    <>
+    <PublicHeader linkHref="/internal-login" linkLabel="관리자 페이지 이동" />
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12">
       <header className="mb-10 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/anda-ci.svg" alt="ANDA ASIA VENTURES" className="mx-auto mb-6 h-16 w-auto" />
         <h1 className="text-3xl font-bold text-accent-soft">AI 심사역 IR 평가</h1>
         <p className="mt-3 text-sm font-bold leading-relaxed text-foreground">
           IR을 올려주세요. 심사역이 직접 검토합니다.
           <br />
           AI 분석 결과는 바로 확인할 수 있어요. (투자 자문이 아닌 참고용)
         </p>
-        <div className="mt-4 flex items-center justify-center gap-4 text-xs">
-          <a href="/internal-login" className="text-muted underline hover:text-accent-soft">
-            안다아시아벤처스 직원이신가요? 로그인
-          </a>
-        </div>
       </header>
 
       {!showResult && (
@@ -208,5 +204,6 @@ export default function Home() {
         </section>
       )}
     </main>
+    </>
   );
 }

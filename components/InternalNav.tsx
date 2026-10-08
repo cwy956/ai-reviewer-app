@@ -47,7 +47,7 @@ export function InternalNav() {
 
         <div className="flex shrink-0 items-center gap-4 text-xs text-muted">
           <Link href="/" className="hidden hover:text-accent lg:inline">
-            기업용 페이지 ↗
+            투자기업 페이지 이동 ↗
           </Link>
           <button onClick={logout} className="hover:text-accent">
             로그아웃
