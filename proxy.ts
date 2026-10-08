@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { AUTH_COOKIE, verifySessionToken } from "@/lib/internalAuth";
+import { AUTH_COOKIE, SESSION_SECONDS, checkSession } from "@/lib/internalAuth";
 
 // Pages/APIs meant only for our own reviewers/admin, never for the startups using the public
 // IR-evaluation page at "/". Gated behind a single shared password entered on /internal-login;
-// 로그인하면 서명된 세션 쿠키(2시간)가 발급됨 — 비밀번호 자체는 쿠키에 저장하지 않음(lib/internalAuth.ts).
+// 로그인하면 서명된 세션 쿠키가 발급됨(활동 없이 2시간, 최대 12시간) — 비밀번호 자체는 쿠키에 저장하지 않음(lib/internalAuth.ts).
 // 새 내부 페이지/API를 만들면 아래 두 목록(PROTECTED_PREFIXES, matcher)에 반드시 추가할 것.
 const PROTECTED_PREFIXES = [
   "/internal",
@@ -38,8 +38,20 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (await verifySessionToken(req.cookies.get(AUTH_COOKIE)?.value, password)) {
-    return NextResponse.next();
+  const session = await checkSession(req.cookies.get(AUTH_COOKIE)?.value, password);
+  if (session.valid) {
+    const res = NextResponse.next();
+    // 사용 중이면 만료를 계속 뒤로 미룸(활동 없이 2시간이 지나야 만료)
+    if (session.renewedToken) {
+      res.cookies.set(AUTH_COOKIE, session.renewedToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: SESSION_SECONDS,
+      });
+    }
+    return res;
   }
 
   if (pathname.startsWith("/api/")) {

@@ -12,7 +12,7 @@ export function PublicHeader({ linkHref, linkLabel }: { linkHref: string; linkLa
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/anda-ci.svg" alt="ANDA ASIA VENTURES" className="h-12 w-auto" />
         </Link>
-        <Link href={linkHref} className="shrink-0 text-xs text-muted hover:text-accent">
+        <Link href={linkHref} prefetch={false} className="shrink-0 text-xs text-muted hover:text-accent">
           {linkLabel} ↗
         </Link>
       </div>
