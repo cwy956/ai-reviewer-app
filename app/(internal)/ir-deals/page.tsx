@@ -97,6 +97,7 @@ export default function IrDealsPage() {
     () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("pending") === "1"
   );
   const [filterDomain, setFilterDomain] = useState<string>("all");
+  const [filterYear, setFilterYear] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -282,8 +283,13 @@ export default function IrDealsPage() {
     }
   }
 
+  const yearOf = (d: Deal) => (d.date ? String(new Date(d.date).getFullYear()) : "");
+  const years = Array.from(new Set(deals.map(yearOf).filter(Boolean))).sort().reverse(); // 최신 연도부터
   const filteredDeals = deals.filter(
-    (d) => (filterDomain === "all" || d.domainId === filterDomain) && (!pendingOnly || (d.source === "mail" && !d.evaluation))
+    (d) =>
+      (filterDomain === "all" || d.domainId === filterDomain) &&
+      (filterYear === "all" || yearOf(d) === filterYear) &&
+      (!pendingOnly || (d.source === "mail" && !d.evaluation))
   );
   const visibleDeals = sortDeals(filteredDeals, sortBy);
 
@@ -322,6 +328,17 @@ export default function IrDealsPage() {
 
         {!loading && deals.length > 0 && (
           <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
+            <div className="flex flex-wrap gap-1.5">
+              {["all", ...years].map((y) => (
+                <button
+                  key={y}
+                  onClick={() => setFilterYear(y)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition ${filterYear === y ? "bg-accent text-white" : "bg-black/5 text-muted hover:bg-black/10"}`}
+                >
+                  {y === "all" ? "전체" : `${y}년`}
+                </button>
+              ))}
+            </div>
             <select
               value={filterDomain}
               onChange={(e) => setFilterDomain(e.target.value)}

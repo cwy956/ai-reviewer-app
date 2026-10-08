@@ -102,6 +102,7 @@ function SectionCard({ title, hint, action, children }: { title: string; hint?: 
 export default function InternalHome() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [deals, setDeals] = useState<DealLite[]>([]);
+  const [rankYear, setRankYear] = useState<string>("2026");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -140,13 +141,15 @@ export default function InternalHome() {
   }
 
   const recent = deals.slice(0, 6);
+  const yearOf = (d: DealLite) => (d.date ? String(new Date(d.date).getFullYear()) : "");
+  const years = Array.from(new Set(deals.map(yearOf).filter(Boolean))).sort().reverse();
   // 같은 회사가 여러 번 들어온 경우(재제출·재평가)는 가장 높은 점수 한 건만 — 순위에 같은 회사가 반복되지 않게
   const scoreOf = (d: DealLite) => d.evaluation?.investmentAttractivenessScore ?? null;
   const companyKey = (d: DealLite) =>
     d.title.split("|")[0].toLowerCase().replace(/㈜|\(주\)|주식회사/g, "").replace(/[\s()\-_.,·]/g, "");
   const bestByCompany = new Map<string, DealLite>();
-  // 순위는 2026년 이후에 들어온 딜만 — 오래된 자료가 섞이지 않게 (날짜 없는 딜은 제외)
-  for (const d of deals.filter((x) => x.date && new Date(x.date).getFullYear() >= 2026)) {
+  // 순위는 선택한 연도의 딜만 (기본 2026년 · 날짜 없는 딜은 '전체'에서만 보임)
+  for (const d of deals.filter((x) => rankYear === "all" || yearOf(x) === rankYear)) {
     const k = companyKey(d) || d.key;
     const cur = bestByCompany.get(k);
     if (!cur || (scoreOf(d) ?? -1) > (scoreOf(cur) ?? -1)) bestByCompany.set(k, d);
@@ -214,13 +217,24 @@ export default function InternalHome() {
 
               <SectionCard
                 title="투자 매력도 순위"
-                hint={`2026년 이후 · 점수 높은 순 · 평가 ${ranked.length}건`}
+                hint={`${rankYear === "all" ? "전체" : `${rankYear}년`} · 점수 높은 순 · 평가 ${ranked.length}건`}
                 action={
                   <Link href="/ir-deals?sort=investment" className="text-xs text-accent-soft hover:underline">
                     전체 보기 →
                   </Link>
                 }
               >
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {["all", ...years].map((y) => (
+                    <button
+                      key={y}
+                      onClick={() => setRankYear(y)}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition ${rankYear === y ? "bg-accent text-white" : "bg-black/5 text-muted hover:bg-black/10"}`}
+                    >
+                      {y === "all" ? "전체" : `${y}년`}
+                    </button>
+                  ))}
+                </div>
                 {ranked.length + notEvaluated.length === 0 ? (
                   <p className="py-4 text-sm text-muted">아직 들어온 딜이 없어요.</p>
                 ) : (
