@@ -98,7 +98,8 @@ export async function POST(request: Request) {
     try {
       const saved = await saveEvaluation({
         source: "platform",
-        companyName: companyName || report.companyName || undefined,
+        // 목록 제목은 "회사명 | 태그라인" 형식 — IR 표지에서 읽은 정식 회사명을 우선(기업이 "테스트"처럼 적어도 목록이 깔끔하도록)
+        companyName: report.companyName && !/unknown|미확인|불명/i.test(report.companyName) ? report.companyName : companyName,
         attachmentFilename: originalName,
         domainId,
         personaId,

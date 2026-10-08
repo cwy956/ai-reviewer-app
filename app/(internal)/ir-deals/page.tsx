@@ -1,5 +1,6 @@
 "use client";
 
+import { LinkifiedText } from "@/components/LinkifiedText";
 import { useEffect, useRef, useState } from "react";
 import { domains } from "@/lib/domains";
 import type { EvaluationReport } from "@/lib/reportSchema";
@@ -436,9 +437,10 @@ export default function IrDealsPage() {
                           ))}
                         </div>
                       )}
-                      <p className="whitespace-pre-wrap text-sm text-foreground/90">
-                        {fullMail.text || "(본문 텍스트가 없습니다 — 첨부파일 또는 서식만 있는 메일일 수 있어요)"}
-                      </p>
+                      <LinkifiedText
+                        className="text-sm text-foreground/90"
+                        text={fullMail.text || "(본문 텍스트가 없습니다 — 첨부파일 또는 서식만 있는 메일일 수 있어요)"}
+                      />
                       {pdfPreviewUrl && (() => {
                         const pdf = fullMail.attachments.find((a) => a.filename.toLowerCase().endsWith(".pdf"));
                         return (

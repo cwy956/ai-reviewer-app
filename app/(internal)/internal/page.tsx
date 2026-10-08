@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SiteVisitCard } from "@/components/SiteVisitCard";
+import { LinkifiedText } from "@/components/LinkifiedText";
 
 interface FullMail {
   msgNum: number;
@@ -19,7 +20,7 @@ interface DealLite {
   title: string;
   domainLabel: string;
   date: string | null;
-  evaluation: { totalScore: number; investmentAttractivenessScore: number | null; investmentVerdict?: string | null } | null;
+  evaluation: { totalScore: number; investmentAttractivenessScore: number | null; investmentVerdict?: string | null; evaluatedModel?: string | null } | null;
 }
 
 interface DashboardData {
@@ -226,6 +227,7 @@ export default function InternalHome() {
                     {ranked.map((d, i) => {
                       const score = scoreOf(d)!;
                       const legacy = !d.evaluation?.investmentVerdict; // 새 기준 결론 라벨이 없으면 예전 기준 평가
+                      const light = /haiku/i.test(d.evaluation?.evaluatedModel ?? ""); // 작은 모델로 일괄 처리한 간이 평가
                       return (
                         <li key={d.key}>
                           <Link href="/ir-deals?sort=investment" className="flex items-center gap-3 py-3 hover:text-accent-soft">
@@ -235,6 +237,7 @@ export default function InternalHome() {
                               <span className="block truncate text-xs text-muted">{d.domainLabel}</span>
                             </span>
                             {legacy && <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-[11px] text-muted">이전 기준</span>}
+                            {light && <span className="shrink-0 rounded-full bg-accent-tint px-2 py-0.5 text-[11px] text-accent-soft">간이 평가</span>}
                             <span className={`w-10 shrink-0 text-right text-2xl font-bold leading-none ${scoreTone(score).text}`}>{score}</span>
                           </Link>
                         </li>
@@ -367,9 +370,10 @@ export default function InternalHome() {
                   </div>
                 )}
 
-                <p className="whitespace-pre-wrap text-sm text-foreground/90">
-                  {fullMailByMsgNum[selectedMsgNum].text || "(본문 텍스트가 없습니다 — 첨부파일 또는 서식만 있는 메일일 수 있어요)"}
-                </p>
+                <LinkifiedText
+                  className="text-sm text-foreground/90"
+                  text={fullMailByMsgNum[selectedMsgNum].text || "(본문 텍스트가 없습니다 — 첨부파일 또는 서식만 있는 메일일 수 있어요)"}
+                />
               </>
             )}
           </div>

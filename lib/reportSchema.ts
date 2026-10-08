@@ -131,6 +131,8 @@ export interface SubmissionInfo {
 }
 
 export interface EvaluationReport {
+  /** 이 평가를 만든 AI 모델. 작은 모델(Haiku)로 일괄 처리한 건은 화면에 '간이 평가'로 표시됨. 예전 평가에는 없음. */
+  evaluatedModel?: string;
   /** 플랫폼 제출 건에만 있음 — 심사역이 연락할 때 쓰는 정보. */
   submission?: SubmissionInfo;
   /** Extracted from the IR material itself — the deal list shouldn't have to fall back to a raw
