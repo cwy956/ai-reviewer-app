@@ -171,8 +171,8 @@ export default function InternalHome() {
             {/* 요약 타일 — 히어로 위로 겹침 */}
             <div className="-mt-14 grid grid-cols-2 gap-3 md:grid-cols-4">
               <StatTile label="이번 주 신규 IR" value={data.summary.newIRThisWeek} tone="good" href="/ir-deals" />
-              <StatTile label="이번 주 투자팀 수신" value={data.summary.investmentThisWeek} href="/ir-deals" />
-              <StatTile label="이번 주 관리팀 수신" value={data.summary.adminThisWeek} href="/mailbox/sent" />
+              <StatTile label="이번 주 투자팀 전달" value={data.summary.investmentThisWeek} href="/ir-deals" />
+              <StatTile label="이번 주 관리팀 전달" value={data.summary.adminThisWeek} href="/mailbox/sent" />
               <StatTile
                 label="전달 실패 (7일)"
                 value={data.summary.sendFailed7d}

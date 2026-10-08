@@ -13,9 +13,9 @@
   --accent-soft: #3f6339;
   --accent-tint: #e8f0e6;
   --muted: #7c8175;
-  --good: #1f9d55;
-  --warn: #b7791f;
-  --bad: #d64545;
+  --good: #3f7d4a;
+  --warn: #a67c2e;
+  --bad: #b4534b;
 }
 
 @theme inline {
