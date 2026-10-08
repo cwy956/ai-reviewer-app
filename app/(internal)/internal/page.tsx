@@ -145,7 +145,8 @@ export default function InternalHome() {
   const companyKey = (d: DealLite) =>
     d.title.split("|")[0].toLowerCase().replace(/㈜|\(주\)|주식회사/g, "").replace(/[\s()\-_.,·]/g, "");
   const bestByCompany = new Map<string, DealLite>();
-  for (const d of deals) {
+  // 순위는 2026년 이후에 들어온 딜만 — 오래된 자료가 섞이지 않게 (날짜 없는 딜은 제외)
+  for (const d of deals.filter((x) => x.date && new Date(x.date).getFullYear() >= 2026)) {
     const k = companyKey(d) || d.key;
     const cur = bestByCompany.get(k);
     if (!cur || (scoreOf(d) ?? -1) > (scoreOf(cur) ?? -1)) bestByCompany.set(k, d);
@@ -213,7 +214,7 @@ export default function InternalHome() {
 
               <SectionCard
                 title="투자 매력도 순위"
-                hint={`점수 높은 순 · 평가 ${ranked.length}건`}
+                hint={`2026년 이후 · 점수 높은 순 · 평가 ${ranked.length}건`}
                 action={
                   <Link href="/ir-deals?sort=investment" className="text-xs text-accent-soft hover:underline">
                     전체 보기 →
